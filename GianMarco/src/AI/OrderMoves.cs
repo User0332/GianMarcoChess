@@ -1,8 +1,6 @@
 using GianMarco.Evaluation;
 using System.Runtime.CompilerServices;
 using ChessChallenge.API;
-using System.Runtime.InteropServices;
-using System.Xml.Serialization;
 
 namespace GianMarco.Search.Utils;
 
