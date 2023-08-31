@@ -1,16 +1,9 @@
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
+using System.Runtime.CompilerServices;
 
-namespace GianMarco.Evaluation;
+namespace GianMarco.Evaluation.Material;
 
-class Constants
-{
-	public const short MaxEval = 32767;
-	public const short MinEval = -32767;
-	public const short DrawValue = 0;
-}
-
-static class Evaluator
+public static class MaterialEval
 {
 	static short[] pieceValues = { 0, 100, 300, 300, 500, 900, 0 };
 
@@ -30,7 +23,7 @@ static class Evaluator
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short CountMaterial(Board board)
+	public static short CountMaterial(Board board)
 	{
 		return (short) (
 			pieceValues[1]*(board.GetPieceList(PieceType.Pawn, true).Count-board.GetPieceList(PieceType.Pawn, false).Count)+
@@ -38,19 +31,5 @@ static class Evaluator
 			pieceValues[4]*(board.GetPieceList(PieceType.Rook, true).Count-board.GetPieceList(PieceType.Rook, false).Count)+
 			pieceValues[5]*(board.GetPieceList(PieceType.Queen, true).Count-board.GetPieceList(PieceType.Queen, false).Count)
 		);
-	}
-
-	public static short EvalPosition(Board board)
-	{
-		if (board.IsDraw()) return 0;
-		 
-		short score = CountMaterial(board);
-
-		return score;
-	}
-
-	public static short EvalPositionWithPerspective(Board board)
-	{
-		return board.IsWhiteToMove ? EvalPosition(board) : (short) -EvalPosition(board);
 	}
 }

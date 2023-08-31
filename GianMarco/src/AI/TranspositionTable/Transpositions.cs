@@ -1,0 +1,1 @@
+namespace GianMarco.TranspositionTable;

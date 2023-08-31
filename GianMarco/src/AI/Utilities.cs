@@ -1,8 +1,17 @@
-using GianMarco.Evaluation;
+using GianMarco.Evaluation.Material;
 using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
 namespace GianMarco.Search.Utils;
+
+static class MoveUtils
+{
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static string GetUCI(Move move)
+	{
+		return ChessChallenge.Chess.MoveUtility.GetMoveNameUCI(move.move);
+	}
+}
 
 static class GamePhaseUtils
 {
@@ -54,10 +63,10 @@ static class MoveOrdering
 		short score = 0;
 
 		if (move.IsCapture)
-			score+=(short) (CaptureBonus+Evaluator.GetPieceValue(move.CapturePieceType)-Evaluator.GetPieceValue(move.MovePieceType));
+			score+=(short) (CaptureBonus+MaterialEval.GetPieceValue(move.CapturePieceType)-MaterialEval.GetPieceValue(move.MovePieceType));
 		
 		if (move.IsPromotion)
-			score+=(short) (PromotionBonus+Evaluator.GetPieceValue(move.PromotionPieceType));
+			score+=(short) (PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType));
 		
 		if (move.IsCastles)
 			score+=CastleBonus;

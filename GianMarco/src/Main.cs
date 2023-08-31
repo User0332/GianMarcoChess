@@ -1,19 +1,9 @@
-﻿using ChessChallenge.API;
-
-namespace GianMarco;
+﻿namespace GianMarco;
 class Program
 {
-	static int Main(string[] args)
+	static int Main()
 	{
-		Console.Write("Board FEN string: ");
-
-		string? fen = Console.ReadLine();
-
-		if (fen is null) Environment.Exit(1);
-
-		Move move = MoveAI.FromFen(fen);
-
-		Console.WriteLine(move.ToString());
+		UCI.PreBuiltInterpreter.RunAndDelegateCommands();
 
 		return 0;
 	}
