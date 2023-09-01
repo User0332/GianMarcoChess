@@ -1,6 +1,5 @@
 using ChessChallenge.API;
 using GianMarco.Search;
-using GianMarco.Search.Utils;
 
 namespace GianMarco.UCI;
 
@@ -12,36 +11,37 @@ public static class PreBuiltInterpreter
 	static void LoadPosition(string[] cmdArgs)
 	{
 		if (cmdArgs[1] == "startpos")
-		{
-			currBoard = Board.CreateBoardFromFEN(ChessChallenge.Chess.FenUtility.StartPositionFEN);
+		{			
+			currBoard.board.LoadPosition(ChessChallenge.Chess.FenUtility.StartPositionFEN);
 
 			if (cmdArgs.Length > 2 && cmdArgs[2] == "moves")
 			{
 				foreach (string move in cmdArgs.Skip(3))
 				{
-					currBoard.board.MakeMove(
-						ChessChallenge.Chess.MoveUtility.GetMoveFromUCIName(move, currBoard.board),
-						inSearch: false
+					currBoard.MakeMove(
+						new Move(move, currBoard)
 					);
 				}
 			}
 			
 			return;
 		}
-
-		var fenStringArr = cmdArgs.Skip(1).TakeWhile(arg => arg != "moves");
-		string fenString = string.Join(' ', fenStringArr);
-
-		currBoard = Board.CreateBoardFromFEN(fenString);
-
-		if (cmdArgs.Length > fenStringArr.Count()+1)
+		if (cmdArgs[1] == "fen")
 		{
-			foreach (string move in cmdArgs.Skip(fenStringArr.Count()+1))
+			var fenStringArr = cmdArgs.Skip(2).TakeWhile(arg => arg != "moves");
+			string fenString = string.Join(' ', fenStringArr);
+
+			currBoard = Board.CreateBoardFromFEN(fenString);
+			
+
+			if (cmdArgs.Length > fenStringArr.Count()+2)
 			{
-				currBoard.board.MakeMove(
-					ChessChallenge.Chess.MoveUtility.GetMoveFromUCIName(move, currBoard.board),
-					inSearch: false
-				);
+				foreach (string move in cmdArgs.Skip(fenStringArr.Count()+3))
+				{
+					currBoard.MakeMove(
+						new Move(move, currBoard)
+					);
+				}
 			}
 		}
 	}
@@ -79,7 +79,7 @@ public static class PreBuiltInterpreter
 			bTimeMs = int.Parse(btimeString);
 		}
 
-		int searchTimeMs = (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/15;
+		int searchTimeMs = (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/20;
 
 
 		int moveTimeIdx = -1;

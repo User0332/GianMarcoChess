@@ -1,11 +1,17 @@
 using ChessChallenge.API;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace GianMarco.Evaluation.Material;
 
 public static class MaterialEval
 {
-	static short[] pieceValues = { 0, 100, 300, 300, 500, 900, 0 };
+	public const short PawnValue = 100;
+	public const short BishopValue = 300;
+	public const short KnightValue = 300;
+	public const short RookValue = 500;
+	public const short QueenValue = 900;
+	public const short KingValue = 1000;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static short GetPieceValue(PieceType pieceType)
@@ -23,13 +29,26 @@ public static class MaterialEval
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static byte GetCount(Board board, PieceType pieceType, bool white)
+	{
+		return (byte) BitOperations.PopCount(board.GetPieceBitboard(pieceType, white));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static short GetCombinedMaterialValue(Board board, PieceType pieceType, bool white)
+	{
+		return (short) (GetCount(board, pieceType, white)*GetPieceValue(pieceType));
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static short CountMaterial(Board board)
 	{
 		return (short) (
-			pieceValues[1]*(board.GetPieceList(PieceType.Pawn, true).Count-board.GetPieceList(PieceType.Pawn, false).Count)+
-			pieceValues[2]*(board.GetPieceList(PieceType.Bishop, true).Count+board.GetPieceList(PieceType.Knight, true).Count-(board.GetPieceList(PieceType.Bishop, false).Count+board.GetPieceList(PieceType.Knight, false).Count))+
-			pieceValues[4]*(board.GetPieceList(PieceType.Rook, true).Count-board.GetPieceList(PieceType.Rook, false).Count)+
-			pieceValues[5]*(board.GetPieceList(PieceType.Queen, true).Count-board.GetPieceList(PieceType.Queen, false).Count)
+			GetCombinedMaterialValue(board, PieceType.Pawn, true)-GetCombinedMaterialValue(board, PieceType.Pawn, false)+
+			GetCombinedMaterialValue(board, PieceType.Knight, true)-GetCombinedMaterialValue(board, PieceType.Knight, false)+
+			GetCombinedMaterialValue(board, PieceType.Bishop, true)-GetCombinedMaterialValue(board, PieceType.Bishop, false)+
+			GetCombinedMaterialValue(board, PieceType.Rook, true)-GetCombinedMaterialValue(board, PieceType.Rook, false)+
+			GetCombinedMaterialValue(board, PieceType.Queen, true)-GetCombinedMaterialValue(board, PieceType.Queen, false)
 		);
 	}
 }
