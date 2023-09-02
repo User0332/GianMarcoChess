@@ -4,6 +4,8 @@ using GianMarco.Evaluation.KingSafety;
 using GianMarco.Evaluation.Pawn;
 using System.Runtime.CompilerServices;
 using System.Reflection.Metadata;
+using GianMarco.Evaluation.Outpost;
+using GianMarco.Evaluation.Position;
 
 namespace GianMarco.Evaluation;
 
@@ -46,6 +48,8 @@ public static class Evaluator
 
 		score+=KingEval.Evaluate(board, score);
 		score+=PawnEval.Evaluate(board);
+		score+=OutpostEval.Evaluate(board);
+		score+=PositionalEval.Evaluate(board);
 
 		return score;
 	}

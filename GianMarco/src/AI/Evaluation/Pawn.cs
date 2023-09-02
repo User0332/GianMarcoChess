@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
 namespace GianMarco.Evaluation.Pawn;
@@ -30,25 +31,109 @@ public static class PawnEval
 		0, 0, 0, 0, 0, 0, 0, 0, // last rank only needed to keep indexes correct, black pawns cannot be here
 	};
 
+	public const ulong FileBitBoard = 0x0101010101010101;
+
+	[MethodImpl(MethodImplOptions.AggressiveOptimization)]
+	static ulong GetFrontViewMask(Square square, bool white)
+	{
+		ulong fileMask = GetPawnSurroundingMask(square);
+		short shifter = (short) (8 * (square.Rank+1));
+		ulong frontMask = white ? (ulong.MaxValue << shifter) : (ulong.MaxValue >> shifter);
+
+		return frontMask & fileMask;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static ulong GetPawnSurroundingMask(Square square)
+	{
+		return
+			(FileBitBoard << square.File) |
+			(FileBitBoard << Math.Max(0, square.File-1)) |
+			(FileBitBoard << Math.Min(7, square.File+1));
+	}
+
+	static short EvaluatePassedPawnsForColor(Board board, bool white)
+	{
+		short score = 0;
+
+		ulong enemyPawns = board.GetPieceBitboard(PieceType.Pawn, !white);
+
+		PieceList pawns = board.GetPieceList(PieceType.Pawn, white);
+
+		foreach (Piece pawn in pawns)
+		{
+			ulong frontViewMask = GetFrontViewMask(pawn.Square, white);
+
+			if ((enemyPawns & frontViewMask) == 0) // if there are no enemy pawns in the front view, this is a passed pawn
+				score+=PassedPawnBonus;
+		}
+
+		return score;
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static short EvaluatePassedPawns(Board board)
 	{
-		short score = 0;
-
-		return score;
+		return (short) (EvaluatePassedPawnsForColor(board, true)-EvaluatePassedPawnsForColor(board, false));
 	}
 
-	static short EvaluateStackedPawns(Board board)
+	static short EvaluateStackedPawnsForColor(Board board, bool white)
 	{
-		short score = 0;
+		short penalty = 0;
+		
+		ulong friendlyPawnBitboard = board.GetPieceBitboard(PieceType.Pawn, white);
 
-		return score;
+		PieceList pawns = board.GetPieceList(PieceType.Pawn, white);
+
+		foreach (Piece pawn in pawns)
+		{
+			ulong fileMask = FileBitBoard << pawn.Square.File;
+
+			if ((friendlyPawnBitboard & fileMask) == 1) continue; // if there are no OTHER friendly pawns in the same file, it is not stacked; continue;
+	
+			penalty+=StackedPawnPenalty;
+		}
+
+		return penalty;
 	}
 
-	static short EvaluateIsolatedPawns(Board board)
+	/// <summary>
+	///  
+	/// </summary>
+	/// <returns>the penalty value of both players combined into a single value (this value must be SUBTRACTED from the final eval)</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static short EvaluateStackedPawnPenalty(Board board)
 	{
-		short score = 0;
+		return (short) (EvaluateStackedPawnsForColor(board, true)-EvaluateStackedPawnsForColor(board, false));
+	}
 
-		return score;
+	static short EvaluateIsolatedPawnsForColor(Board board, bool white)
+	{
+		short penalty = 0;
+
+		ulong friendlyPawnBitboard = board.GetPieceBitboard(PieceType.Pawn, white);
+
+		PieceList pawns = board.GetPieceList(PieceType.Pawn, white);
+
+		foreach (Piece pawn in pawns)
+		{
+			ulong surroundingMask = GetPawnSurroundingMask(pawn.Square);
+
+			if ((friendlyPawnBitboard & surroundingMask) == 1) // if there are no OTHER friendly pawns in the files surrounding this pawn, it is isolated
+				penalty+=IsolatedPawnPenalty;
+		}
+
+		return penalty;		
+	}
+
+	/// <summary>
+	///  
+	/// </summary>
+	/// <returns>the penalty value of both players combined into a single value (this value must be SUBTRACTED from the final eval)</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static short EvaluateIsolatedPawnPenalty(Board board)
+	{
+		return (short) (EvaluateIsolatedPawnsForColor(board, true)-EvaluateIsolatedPawnsForColor(board, false));
 	}
 
 	static short EvaluatePushedPawns(Board board)
@@ -68,9 +153,9 @@ public static class PawnEval
 	{
 		short score = EvaluatePushedPawns(board);
 
-		score+=EvaluateIsolatedPawns(board);
+		score-=EvaluateIsolatedPawnPenalty(board); // note the subtraction
+		score-=EvaluateStackedPawnPenalty(board); // note the subtraction
 		score+=EvaluatePassedPawns(board);
-		score+=EvaluateStackedPawns(board);
 
 		return score;
 	}

@@ -99,7 +99,7 @@ public static class PreBuiltInterpreter
 
 	static void Stop()
 	{
-		Move move = searcher.EndSearch();
+		searcher.EndSearch();
 
 		searcher = null;
 	}

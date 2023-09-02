@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ChessChallenge.API;
@@ -13,6 +12,7 @@ class BasicSearch
 	const byte MOVE_STACKALLOC_AMT = 218;
 	const byte CAPTURE_MOVE_STACKALLOC_AMT = 100;
 	const byte TTSizeMB = 64;
+	const byte ExtensionCap = 10;
 
 	private readonly List<Move>? customOrdered;
 
@@ -24,6 +24,8 @@ class BasicSearch
 	public List<Move>? BestMoves = null;
 	public long TimeSearchedMs = 0;
 	public int BestScore = Constants.MinEval;
+	public ushort MaxDepthSearched = 0;
+	public uint NodesSearched = 0;
 
 	public BasicSearch(Board board, List<Move>? customOrderedMoves = null)
 	{
@@ -46,12 +48,10 @@ class BasicSearch
 		return board.IsWhiteToMove && isWhite ? Constants.MinEval : Constants.MaxEval;
 	}
 
-	static void PrintMoves(Span<Move> moves)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	bool MovePlayedWasInterestingMove(Move move)
 	{
-		foreach (Move move in moves)
-		{
-			Console.Write($"{move}, ");
-		}
+		return board.IsInCheck();
 	}
 
 	public List<Move> Execute(ushort depth)
@@ -82,9 +82,13 @@ class BasicSearch
 		{
 			if (KillSearch) break;
 
+			NodesSearched++;
+
 			board.MakeMove(move);
 
-			int score = -NegaMax((ushort) (depth-1), Constants.MinEval, Constants.MaxEval, 1);
+			byte extension = (byte) (MovePlayedWasInterestingMove(move) ? 1 : 0);
+
+			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension);
 
 			board.UndoMove(move);
 
@@ -112,7 +116,7 @@ class BasicSearch
 			Move bestMove = bestMoves[Random.Shared.Next(bestMoves.Count)];
 			string scoreString = Evaluator.IsMateScore(bestScore) ? $"mate {Evaluator.ExtractMateInNMoves(bestScore)}" : $"cp {bestScore}";
 
-			Console.WriteLine($"info depth {depth} time {timeSearchedMs} pv {MoveUtils.GetUCI(bestMove)} score {scoreString}");
+			Console.WriteLine($"info depth {MaxDepthSearched} time {timeSearchedMs} nodes {NodesSearched} pv {MoveUtils.GetUCI(bestMove)} score {scoreString}");
 		}
 
 		return bestMoves;
@@ -121,7 +125,7 @@ class BasicSearch
 	int NegaMaxQuiesce(int alpha, int beta, ushort depthFromRoot)
 	{
 		if (board.IsDraw()) return Constants.DrawValue;
-		if (board.IsInCheckmate()) return Constants.DrawValue; // since we only gen capture moves, we don't know if this is forced mate so we'll assume this is avoidable
+		if (board.IsInCheckmate()) return Evaluator.MateIn(depthFromRoot);
 
 		if (KillSearch) return WorstEvalForBot();
 
@@ -139,6 +143,8 @@ class BasicSearch
 		{
 			if (KillSearch) return WorstEvalForBot();
 
+			NodesSearched++;
+
 			board.MakeMove(move);
 
 			eval = -NegaMaxQuiesce(-beta, -alpha, (ushort) (depthFromRoot+1));
@@ -150,9 +156,11 @@ class BasicSearch
 			if (eval > alpha) alpha = eval;	
 		}
 
+		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
+
 		return alpha;
 	}
-	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot)
+	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions)
 	{
 		if (board.IsRepeatedPosition() || board.IsFiftyMoveDraw() || board.IsInsufficientMaterial()) return Constants.DrawValue;
 
@@ -181,10 +189,14 @@ class BasicSearch
 		foreach (Move move in moves)
 		{
 			if (KillSearch) return WorstEvalForBot();
+
+			NodesSearched++;
 			
 			board.MakeMove(move);
 
-			int eval = -NegaMax((ushort) (depth-1), -beta, -alpha, (ushort) (depthFromRoot+1));
+			byte extension = (byte) ((numExtensions < ExtensionCap) && MovePlayedWasInterestingMove(move) ? (GamePhaseUtils.IsEndgame(board) ? 2 : 1) : 0);
+
+			int eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension));
 
 			board.UndoMove(move);
 
@@ -268,7 +280,7 @@ class IterDeepSearch
 
 		string scoreString = Evaluator.IsMateScore(lastSearch.BestScore) ? $"mate {Evaluator.ExtractMateInNMoves(lastSearch.BestScore)}" : $"cp {lastSearch.BestScore}";
 		
-		Console.WriteLine($"info depth {searches.Count} time {lastSearch.TimeSearchedMs} pv {moveName} score {scoreString}");
+		Console.WriteLine($"info depth {lastSearch.MaxDepthSearched} time {lastSearch.TimeSearchedMs} nodes {lastSearch.NodesSearched} pv {moveName} score {scoreString}");
 
 		Console.WriteLine($"bestmove {moveName}");
 
