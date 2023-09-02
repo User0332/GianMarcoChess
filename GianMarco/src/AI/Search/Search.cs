@@ -236,14 +236,14 @@ class IterDeepSearch
 			{
 				var search = new BasicSearch(
 					board,
-					bestMoveLists.Any() ? bestMoveLists.SelectMany(item => item).Reverse().ToList() : null
+					bestMoveLists.Any() ? bestMoveLists.SelectMany(item => item).ToList() : null
 				);
 
 				searches.Add(search);
 
 				List<Move> bestMoves = search.Execute(i);
 
-				bestMoveLists.Add(bestMoves);
+				bestMoveLists.Insert(0, bestMoves);
 
 				if (endSearchFlag) return;
 			}
@@ -256,7 +256,7 @@ class IterDeepSearch
 
 		foreach (var search in searches) search.KillSearch = true;
 
-		List<Move> bestMoves = bestMoveLists.Last();
+		List<Move> bestMoves = bestMoveLists.First();
 		Move bestMove = bestMoves[Random.Shared.Next(bestMoves.Count)];
 
 		BasicSearch lastSearch;
