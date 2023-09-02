@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
@@ -17,9 +18,9 @@ public static class PositionalEval
 		ulong blackPieces = board.BlackPiecesBitboard;
 
 		return (short) (
-			((whitePieces & SecondToLastOuterRing)*1)-((blackPieces & SecondToLastOuterRing)*1)+
-			((whitePieces & AlmostCenter)*5)-((blackPieces & AlmostCenter)*5)+
-			((whitePieces & CenterOfTheBoard)*8)-((blackPieces & AlmostCenter)*8)
+			(BitOperations.PopCount(whitePieces & SecondToLastOuterRing)*1)-(BitOperations.PopCount(blackPieces & SecondToLastOuterRing)*1)+
+			(BitOperations.PopCount(whitePieces & AlmostCenter)*5)-(BitOperations.PopCount(blackPieces & AlmostCenter)*5)+
+			(BitOperations.PopCount(whitePieces & CenterOfTheBoard)*8)-(BitOperations.PopCount(blackPieces & AlmostCenter)*8)
 		);
 	}
 }

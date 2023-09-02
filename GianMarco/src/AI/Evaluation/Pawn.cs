@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
@@ -89,7 +90,7 @@ public static class PawnEval
 		{
 			ulong fileMask = FileBitBoard << pawn.Square.File;
 
-			if ((friendlyPawnBitboard & fileMask) == 1) continue; // if there are no OTHER friendly pawns in the same file, it is not stacked; continue;
+			if (BitOperations.PopCount(friendlyPawnBitboard & fileMask) == 1) continue; // if there are no OTHER friendly pawns in the same file, it is not stacked; continue;
 	
 			penalty+=StackedPawnPenalty;
 		}
@@ -119,7 +120,7 @@ public static class PawnEval
 		{
 			ulong surroundingMask = GetPawnSurroundingMask(pawn.Square);
 
-			if ((friendlyPawnBitboard & surroundingMask) == 1) // if there are no OTHER friendly pawns in the files surrounding this pawn, it is isolated
+			if (BitOperations.PopCount(friendlyPawnBitboard & surroundingMask) == 1) // if there are no OTHER friendly pawns in the files surrounding this pawn, it is isolated
 				penalty+=IsolatedPawnPenalty;
 		}
 
