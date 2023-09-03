@@ -13,6 +13,7 @@ class BasicSearch
 	const byte CAPTURE_MOVE_STACKALLOC_AMT = 100;
 	const byte TTSizeMB = 64;
 	const byte ExtensionCap = 10;
+	const short NullMovePruneThreshold = 20;
 	public const byte MAX_LINE_SIZE = 10;
 
 	private readonly List<Move>[]? customOrderedLines;
@@ -155,19 +156,6 @@ class BasicSearch
 
 		GetOrderedLegalMoves(ref moves, capturesOnly: true);
 
-		// if ((depthFromRoot < 10) && (customOrderedLines is not null) && (customOrderedLines[depthFromRoot].Count != 0))
-		// {
-		// 	// add custom ordered moves to front
-		// 	foreach (Move move in moves)
-		// 	{
-		// 		if (customOrderedLines[depthFromRoot].Any(item => item.Equals(move))) continue;
-
-		// 		customOrderedLines[depthFromRoot].Add(move);
-		// 	}
-
-		// 	moves = CollectionsMarshal.AsSpan(customOrderedLines[depthFromRoot]);
-		// }
-
 		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
 		currLine.Fill(Move.NullMove);
 
@@ -196,8 +184,6 @@ class BasicSearch
 			}
 		}
 
-		if (depthFromRoot < 10) currLineBuilder[depthFromRoot] = bestMove;
-
 		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
 
 		return alpha;
@@ -214,13 +200,29 @@ class BasicSearch
 
 		if (depth == 0) return NegaMaxQuiesce(alpha, beta, depthFromRoot, ref currLineBuilder);
 
+		bool inCheck = board.IsInCheck();
+
+		// Null move pruning
+		if ((depth >= 3) && !inCheck)
+		{
+			board.MakeMove(Move.NullMove);
+			
+			Span<Move> throwaway = stackalloc Move[MAX_LINE_SIZE];
+			
+			int eval = -NegaMax((ushort) (depth-3), -beta, -alpha, (ushort) (depthFromRoot+1), numExtensions, ref throwaway, -1);
+			
+			board.UndoMove(Move.NullMove);
+
+			if (eval >= (beta-NullMovePruneThreshold)) return beta;
+		}
+
 		Span<Move> moves = stackalloc Move[MOVE_STACKALLOC_AMT];
 
 		GetOrderedLegalMoves(ref moves);
 
 		if (moves.Length == 0)
 		{
-			if (board.IsInCheck()) return Evaluator.MateIn(depthFromRoot);
+			if (inCheck) return Evaluator.MateIn(depthFromRoot);
 
 			return Constants.DrawValue; // stalemate
 		}
