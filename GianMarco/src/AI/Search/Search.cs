@@ -13,6 +13,7 @@ class BasicSearch
 	const byte CAPTURE_MOVE_STACKALLOC_AMT = 100;
 	const byte TTSizeMB = 64;
 	const byte ExtensionCap = 10;
+	const byte MAX_LINE_SIZE = 10;
 
 	private readonly List<Move>? customOrdered;
 
@@ -21,7 +22,9 @@ class BasicSearch
 	private readonly bool isWhite;
 	public bool SearchEnded = false;
 	public bool KillSearch = false;
-	public List<Move>? BestMoves = null;
+	public Move BestMove = Move.NullMove;
+	public Move[] BestLine = { Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove };
+	private readonly Move[] currLine = { Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove };
 	public long TimeSearchedMs = 0;
 	public int BestScore = Constants.MinEval;
 	public ushort MaxDepthSearched = 0;
@@ -33,6 +36,11 @@ class BasicSearch
 		isWhite = board.IsWhiteToMove;
 		customOrdered = customOrderedMoves;
 		tt = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
+	}
+
+	void ClearCurrentLine()
+	{
+		for (int i = 0; i < currLine.Length; i++) currLine[i] = Move.NullMove;
 	}
 
 	void GetOrderedLegalMoves(ref Span<Move> moveSpan, bool capturesOnly = false)
@@ -54,7 +62,7 @@ class BasicSearch
 		return board.IsInCheck();
 	}
 
-	public List<Move> Execute(ushort depth)
+	public Move Execute(ushort depth)
 	{
 		long startTimeTicks = DateTime.Now.Ticks;
 
@@ -75,8 +83,11 @@ class BasicSearch
 			moves = CollectionsMarshal.AsSpan(customOrdered);
 		}
 
+		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
+		currLine.Fill(Move.NullMove);
+
 		int bestScore = Constants.MinEval;
-		var bestMoves = new List<Move>(2) { moves[0] };
+		Move bestMove = moves[0];
 
 		foreach (Move move in moves)
 		{
@@ -88,23 +99,22 @@ class BasicSearch
 
 			byte extension = (byte) (MovePlayedWasInterestingMove(move) ? 1 : 0);
 
-			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension);
+			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension, ref currLine);
 
 			board.UndoMove(move);
-
-			if (score == bestScore) bestMoves.Add(move);
 
 			if (score > bestScore)
 			{
 				bestScore = score;
-				bestMoves.Clear();
-				bestMoves.Add(move);
+				bestMove = move;
+				BestLine = currLine.ToArray();
 			}
 		}
 		
 		SearchEnded = true;
 
-		BestMoves = bestMoves;
+		BestLine[0] = bestMove;
+		BestMove = bestMove;
 		BestScore = bestScore;
 
 		long timeSearchedMs = (DateTime.Now.Ticks - startTimeTicks) / TimeSpan.TicksPerMillisecond;
@@ -113,16 +123,16 @@ class BasicSearch
 
 		if (!KillSearch)
 		{
-			Move bestMove = bestMoves[Random.Shared.Next(bestMoves.Count)];
 			string scoreString = Evaluator.IsMateScore(bestScore) ? $"mate {Evaluator.ExtractMateInNMoves(bestScore)}" : $"cp {bestScore}";
+			string lineString = string.Join(' ', BestLine.TakeWhile((move) => move != Move.NullMove).Select(MoveUtils.GetUCI));
 
-			Console.WriteLine($"info depth {MaxDepthSearched} time {timeSearchedMs} nodes {NodesSearched} pv {MoveUtils.GetUCI(bestMove)} score {scoreString}");
+			Console.WriteLine($"info depth {depth} seldepth {MaxDepthSearched} time {timeSearchedMs} nodes {NodesSearched} score {scoreString} pv {lineString}");
 		}
 
-		return bestMoves;
+		return bestMove;
 	}
 
-	int NegaMaxQuiesce(int alpha, int beta, ushort depthFromRoot)
+	int NegaMaxQuiesce(int alpha, int beta, ushort depthFromRoot, ref Span<Move> currLineBuilder)
 	{
 		if (board.IsDraw()) return Constants.DrawValue;
 		if (board.IsInCheckmate()) return Evaluator.MateIn(depthFromRoot);
@@ -139,6 +149,11 @@ class BasicSearch
 
 		GetOrderedLegalMoves(ref moves, capturesOnly: true);
 
+		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
+		currLine.Fill(Move.NullMove);
+
+		Move bestMove = Move.NullMove;
+
 		foreach (Move move in moves)
 		{
 			if (KillSearch) return WorstEvalForBot();
@@ -147,20 +162,28 @@ class BasicSearch
 
 			board.MakeMove(move);
 
-			eval = -NegaMaxQuiesce(-beta, -alpha, (ushort) (depthFromRoot+1));
+			eval = -NegaMaxQuiesce(-beta, -alpha, (ushort) (depthFromRoot+1), ref currLine);
 
 			board.UndoMove(move);
 
 			if (eval >= beta) return beta;
 
-			if (eval > alpha) alpha = eval;	
+			if (eval > alpha)
+			{
+				alpha = eval;
+				bestMove = move;
+
+				currLine.CopyTo(currLineBuilder);
+			}
 		}
+
+		if (depthFromRoot < 10) currLineBuilder[depthFromRoot] = bestMove;
 
 		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
 
 		return alpha;
 	}
-	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions)
+	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder)
 	{
 		if (board.IsRepeatedPosition() || board.IsFiftyMoveDraw() || board.IsInsufficientMaterial()) return Constants.DrawValue;
 
@@ -170,7 +193,7 @@ class BasicSearch
 
 		if (lookupVal != TranspositionTable.LookupFailed) return lookupVal;
 
-		if (depth == 0) return NegaMaxQuiesce(alpha, beta, depthFromRoot);
+		if (depth == 0) return NegaMaxQuiesce(alpha, beta, depthFromRoot, ref currLineBuilder);
 
 		Span<Move> moves = stackalloc Move[MOVE_STACKALLOC_AMT];
 
@@ -182,6 +205,9 @@ class BasicSearch
 
 			return Constants.DrawValue; // stalemate
 		}
+
+		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
+		currLine.Fill(Move.NullMove);
 
 		byte evalBound = TranspositionTable.UpperBound;
 		Move bestMove = Move.NullMove;
@@ -196,7 +222,7 @@ class BasicSearch
 
 			byte extension = (byte) ((numExtensions < ExtensionCap) && MovePlayedWasInterestingMove(move) ? (GamePhaseUtils.IsEndgame(board) ? 2 : 1) : 0);
 
-			int eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension));
+			int eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine);
 
 			board.UndoMove(move);
 
@@ -212,8 +238,12 @@ class BasicSearch
 				bestMove = move;
 
 				alpha = eval;
+
+				currLine.CopyTo(currLineBuilder);
 			}
 		}
+
+		if (depthFromRoot < 10) currLineBuilder[depthFromRoot] = bestMove;
 
 		tt.StoreEvaluation(depth, alpha, evalBound, bestMove);
 
@@ -231,7 +261,7 @@ class IterDeepSearch
 
 	private List<BasicSearch> searches = new(5);
 
-	private List<List<Move>> bestMoveLists = new(4);
+	private List<Move> bestMoves = new(4);
 
 	public IterDeepSearch(Board board, ushort maxDepth)
 	{
@@ -248,14 +278,14 @@ class IterDeepSearch
 			{
 				var search = new BasicSearch(
 					board,
-					bestMoveLists.Any() ? bestMoveLists.SelectMany(item => item).ToList() : null
+					bestMoves
 				);
 
 				searches.Add(search);
 
-				List<Move> bestMoves = search.Execute(i);
+				Move bestMove = search.Execute(i);
 
-				bestMoveLists.Insert(0, bestMoves);
+				bestMoves.Insert(0, bestMove);
 
 				if (endSearchFlag) return;
 			}
@@ -268,8 +298,7 @@ class IterDeepSearch
 
 		foreach (var search in searches) search.KillSearch = true;
 
-		List<Move> bestMoves = bestMoveLists.First();
-		Move bestMove = bestMoves[Random.Shared.Next(bestMoves.Count)];
+		Move bestMove = bestMoves.First();
 
 		BasicSearch lastSearch;
 
@@ -279,8 +308,9 @@ class IterDeepSearch
 		string moveName = MoveUtils.GetUCI(bestMove);
 
 		string scoreString = Evaluator.IsMateScore(lastSearch.BestScore) ? $"mate {Evaluator.ExtractMateInNMoves(lastSearch.BestScore)}" : $"cp {lastSearch.BestScore}";
-		
-		Console.WriteLine($"info depth {lastSearch.MaxDepthSearched} time {lastSearch.TimeSearchedMs} nodes {lastSearch.NodesSearched} pv {moveName} score {scoreString}");
+		string lineString = string.Join(' ', lastSearch.BestLine.TakeWhile((move) => move != Move.NullMove).Select(MoveUtils.GetUCI));
+
+		Console.WriteLine($"info depth {searches.Count} seldepth {lastSearch.MaxDepthSearched} time {lastSearch.TimeSearchedMs} nodes {lastSearch.NodesSearched} score {scoreString} pv {lineString}");
 
 		Console.WriteLine($"bestmove {moveName}");
 

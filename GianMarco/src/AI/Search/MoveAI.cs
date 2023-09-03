@@ -4,7 +4,7 @@ namespace GianMarco;
 
 class MoveAI
 {
-	public static List<Move> FromFen(string fen)
+	public static Move FromFen(string fen)
 	{
 		Board? board = null;
 
@@ -18,8 +18,8 @@ class MoveAI
 
 		var search = new Search.BasicSearch(board);
 
-		List<Move> bestMoves = search.Execute(5);
+		Move bestMove = search.Execute(5);
 
-		return bestMoves;	
+		return bestMove;	
 	}
 }
