@@ -13,9 +13,9 @@ class BasicSearch
 	const byte CAPTURE_MOVE_STACKALLOC_AMT = 100;
 	const byte TTSizeMB = 64;
 	const byte ExtensionCap = 10;
-	const byte MAX_LINE_SIZE = 10;
+	public const byte MAX_LINE_SIZE = 10;
 
-	private readonly List<Move>? customOrdered;
+	private readonly List<Move>[]? customOrderedLines;
 
 	private readonly Board board;
 	private readonly TranspositionTable tt;
@@ -23,24 +23,18 @@ class BasicSearch
 	public bool SearchEnded = false;
 	public bool KillSearch = false;
 	public Move BestMove = Move.NullMove;
-	public Move[] BestLine = { Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove };
-	private readonly Move[] currLine = { Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove, Move.NullMove };
+	public IEnumerable<Move>? BestLine = null;
 	public long TimeSearchedMs = 0;
 	public int BestScore = Constants.MinEval;
 	public ushort MaxDepthSearched = 0;
 	public uint NodesSearched = 0;
 
-	public BasicSearch(Board board, List<Move>? customOrderedMoves = null)
+	public BasicSearch(Board board, List<Move>[]? customOrderedLines = null)
 	{
 		this.board = board;
 		isWhite = board.IsWhiteToMove;
-		customOrdered = customOrderedMoves;
+		this.customOrderedLines = customOrderedLines;
 		tt = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
-	}
-
-	void ClearCurrentLine()
-	{
-		for (int i = 0; i < currLine.Length; i++) currLine[i] = Move.NullMove;
 	}
 
 	void GetOrderedLegalMoves(ref Span<Move> moveSpan, bool capturesOnly = false)
@@ -70,17 +64,19 @@ class BasicSearch
 
 		GetOrderedLegalMoves(ref moves);
 
-		if (customOrdered is not null)
+		bool customOrderedIsValid = (customOrderedLines is not null) && (customOrderedLines[0].Count != 0);
+
+		if (customOrderedIsValid)
 		{
 			// add custom ordered moves to front
 			foreach (Move move in moves)
 			{
-				if (customOrdered.Any(item => item.Equals(move))) continue;
+				if (customOrderedLines[0].Any(item => item.Equals(move))) continue;
 
-				customOrdered.Add(move);
+				customOrderedLines[0].Add(move);
 			}
 
-			moves = CollectionsMarshal.AsSpan(customOrdered);
+			moves = CollectionsMarshal.AsSpan(customOrderedLines[0]);
 		}
 
 		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
@@ -89,8 +85,10 @@ class BasicSearch
 		int bestScore = Constants.MinEval;
 		Move bestMove = moves[0];
 
-		foreach (Move move in moves)
+		for (int i = 0; i < moves.Length; i++)
 		{
+			Move move = moves[i];
+
 			if (KillSearch) break;
 
 			NodesSearched++;
@@ -99,7 +97,14 @@ class BasicSearch
 
 			byte extension = (byte) (MovePlayedWasInterestingMove(move) ? 1 : 0);
 
-			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension, ref currLine);
+			int playedMoveLineIndex;
+
+			if (customOrderedIsValid && (i < customOrderedLines[0].Count))
+				playedMoveLineIndex = i;
+			else
+				playedMoveLineIndex = -1;
+
+			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension, ref currLine, playedMoveLineIndex);
 
 			board.UndoMove(move);
 
@@ -107,13 +112,14 @@ class BasicSearch
 			{
 				bestScore = score;
 				bestMove = move;
+				currLine[0] = move;
 				BestLine = currLine.ToArray();
 			}
 		}
 		
 		SearchEnded = true;
 
-		BestLine[0] = bestMove;
+		BestLine = BestLine.TakeWhile((move) => move != Move.NullMove);
 		BestMove = bestMove;
 		BestScore = bestScore;
 
@@ -124,7 +130,7 @@ class BasicSearch
 		if (!KillSearch)
 		{
 			string scoreString = Evaluator.IsMateScore(bestScore) ? $"mate {Evaluator.ExtractMateInNMoves(bestScore)}" : $"cp {bestScore}";
-			string lineString = string.Join(' ', BestLine.TakeWhile((move) => move != Move.NullMove).Select(MoveUtils.GetUCI));
+			string lineString = string.Join(' ', BestLine.Select(MoveUtils.GetUCI));
 
 			Console.WriteLine($"info depth {depth} seldepth {MaxDepthSearched} time {timeSearchedMs} nodes {NodesSearched} score {scoreString} pv {lineString}");
 		}
@@ -148,6 +154,19 @@ class BasicSearch
 		Span<Move> moves = stackalloc Move[CAPTURE_MOVE_STACKALLOC_AMT];
 
 		GetOrderedLegalMoves(ref moves, capturesOnly: true);
+
+		// if ((depthFromRoot < 10) && (customOrderedLines is not null) && (customOrderedLines[depthFromRoot].Count != 0))
+		// {
+		// 	// add custom ordered moves to front
+		// 	foreach (Move move in moves)
+		// 	{
+		// 		if (customOrderedLines[depthFromRoot].Any(item => item.Equals(move))) continue;
+
+		// 		customOrderedLines[depthFromRoot].Add(move);
+		// 	}
+
+		// 	moves = CollectionsMarshal.AsSpan(customOrderedLines[depthFromRoot]);
+		// }
 
 		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
 		currLine.Fill(Move.NullMove);
@@ -183,7 +202,7 @@ class BasicSearch
 
 		return alpha;
 	}
-	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder)
+	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder, int playedMoveLineIndex)
 	{
 		if (board.IsRepeatedPosition() || board.IsFiftyMoveDraw() || board.IsInsufficientMaterial()) return Constants.DrawValue;
 
@@ -206,14 +225,30 @@ class BasicSearch
 			return Constants.DrawValue; // stalemate
 		}
 
+		bool customOrderedIsValid = (depthFromRoot < 10) && (customOrderedLines is not null) && (customOrderedLines[depthFromRoot].Count != 0) && (playedMoveLineIndex != -1) && (customOrderedLines[depthFromRoot].Count > playedMoveLineIndex);
+
+		if (customOrderedIsValid)
+		{
+			Move addToFront = customOrderedLines[depthFromRoot][playedMoveLineIndex];
+			Move[] newOrdered = new Move[moves.Length+1];
+
+			for (int i = 1; i < newOrdered.Length; i++) newOrdered[i] = moves[i-1];
+
+			newOrdered[0] = addToFront;
+
+			moves = newOrdered.AsSpan();
+		}
+
 		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
 		currLine.Fill(Move.NullMove);
 
 		byte evalBound = TranspositionTable.UpperBound;
 		Move bestMove = Move.NullMove;
 
-		foreach (Move move in moves)
+		for (int i = 0; i < moves.Length; i++)
 		{
+			Move move = moves[i];
+
 			if (KillSearch) return WorstEvalForBot();
 
 			NodesSearched++;
@@ -222,7 +257,9 @@ class BasicSearch
 
 			byte extension = (byte) ((numExtensions < ExtensionCap) && MovePlayedWasInterestingMove(move) ? (GamePhaseUtils.IsEndgame(board) ? 2 : 1) : 0);
 
-			int eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine);
+			if (!(customOrderedIsValid && i == 0)) playedMoveLineIndex = -1;
+
+			int eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine, playedMoveLineIndex);
 
 			board.UndoMove(move);
 
@@ -261,7 +298,7 @@ class IterDeepSearch
 
 	private List<BasicSearch> searches = new(5);
 
-	private List<Move> bestMoves = new(4);
+	private readonly List<Move>[] bestMoveLinesTransformed = new List<Move>[BasicSearch.MAX_LINE_SIZE] { new(), new(), new(), new(), new(), new(), new(), new(), new(), new() };
 
 	public IterDeepSearch(Board board, ushort maxDepth)
 	{
@@ -278,14 +315,19 @@ class IterDeepSearch
 			{
 				var search = new BasicSearch(
 					board,
-					bestMoves
+					bestMoveLinesTransformed
 				);
 
 				searches.Add(search);
 
-				Move bestMove = search.Execute(i);
+				search.Execute(i);
 
-				bestMoves.Insert(0, bestMove);
+				Move[] bestLine = search.BestLine.ToArray();
+
+				for (int j = 0; j < bestLine.Length; j++)
+				{
+					bestMoveLinesTransformed[j].Insert(0, bestLine[j]);
+				}
 
 				if (endSearchFlag) return;
 			}
@@ -298,22 +340,20 @@ class IterDeepSearch
 
 		foreach (var search in searches) search.KillSearch = true;
 
-		Move bestMove = bestMoves.First();
-
 		BasicSearch lastSearch;
 
 		try { lastSearch = searches.Last(search => search.BestScore != Constants.MinEval); }
 		catch (InvalidOperationException) { lastSearch = searches.Last(); }
 
-		string moveName = MoveUtils.GetUCI(bestMove);
+		string moveName = MoveUtils.GetUCI(lastSearch.BestMove);
 
 		string scoreString = Evaluator.IsMateScore(lastSearch.BestScore) ? $"mate {Evaluator.ExtractMateInNMoves(lastSearch.BestScore)}" : $"cp {lastSearch.BestScore}";
-		string lineString = string.Join(' ', lastSearch.BestLine.TakeWhile((move) => move != Move.NullMove).Select(MoveUtils.GetUCI));
+		string lineString = string.Join(' ', lastSearch.BestLine.Select(MoveUtils.GetUCI));
 
 		Console.WriteLine($"info depth {searches.Count} seldepth {lastSearch.MaxDepthSearched} time {lastSearch.TimeSearchedMs} nodes {lastSearch.NodesSearched} score {scoreString} pv {lineString}");
 
 		Console.WriteLine($"bestmove {moveName}");
 
-		return bestMove;
+		return lastSearch.BestMove;
 	}
 }

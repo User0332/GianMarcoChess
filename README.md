@@ -7,7 +7,7 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - Look into why initial evals for passed pawns come out to ~ -300 cp
 - Fix endgme checkmates (problem found w/ king & queen vs. king -- finds forced checkmate sequence but loses the sequence on the next few moves)
 - Add pondering
-- Use move lines in iterative deepening for alpha beta pruning (to counteract the slowdown caused by saving move lines)
+- Add null move pruning
 
 ## Changelog
 - Started late (started 9/1/23, not all changes from 9/1/23 are listed)
