@@ -7,6 +7,9 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - Look into why initial evals for passed pawns come out to ~ -300 cp
 - Fix endgme checkmates (problem found w/ king & queen vs. king -- finds forced checkmate sequence but loses the sequence on the next few moves)
 - Add pondering
+- Maybe - add bias against draw (by modifying (`GianMarco.Evaluation.Constants.DrawValue`))
+- Find out why evals always start at +3 for black (note: this started happening after the passed/isolated/stacked pawn eval impl.)
+- Fix bugs in move line generation
 
 ## Changelog
 - Started late (started 9/1/23, not all changes from 9/1/23 are listed)
@@ -20,3 +23,5 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - 9/2/23 - Added move lines (for full PV searched)
 - 9/3/23 - Used move lines for more alpha-beta pruning
 - 9/3/23 - Added null move pruning
+- 9/4/23 - Removed move lines for alpha-beta pruning (as they gave no benefit and move lines are bugged)
+- 9/4/23 - Removed null move pruning as it caused the bot to blunder pieces (possibly due to low search depths)

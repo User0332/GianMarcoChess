@@ -43,9 +43,9 @@ public static class KingEval
 
 	const short DangerousPieceProximityWeight = 15;
 
-	static short CalculateDangerousPieceProximityPenalty(Board board, Square kingSquare, bool whiteIsAttacking)
+	static short CalculateDangerousPieceProximityScore(Board board, Square kingSquare, bool whiteIsAttacking)
 	{
-		short penalty = 10;
+		short score = 0;
 
 		PieceList queens = board.GetPieceList(PieceType.Queen, whiteIsAttacking);
 
@@ -54,21 +54,18 @@ public static class KingEval
 			short distance = (short) (Math.Abs(queen.Square.Rank-kingSquare.Rank)+Math.Abs(queen.Square.File-kingSquare.File));
 			if (distance == 1) continue; // queen is right next to king
 
-			penalty-=distance;
+			score+=(short) (distance*DangerousPieceProximityWeight); // the farther dangerous pieces are from our king, the better
 		}
 
-		return Math.Max(penalty, (short) 0);
+		return score;
 	}
 
 	/// <summary>
 	///  In the endgame, we want kings farther away from the corners
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short KingPositionSafetyEndgame(Board board, int materialDifference)
+	static short KingPositionSafetyEndgame(Square whiteKingSquare, Square blackKingSquare, int materialDifference)
 	{
-		Square whiteKingSquare = board.GetKingSquare(true);
-		Square blackKingSquare = board.GetKingSquare(false);
-
 		short score = (short) (KingEndgameScores[whiteKingSquare.Index]-KingEndgameScores[blackKingSquare.Index]);
 
 		short kingDistance = (short) ((Math.Abs(whiteKingSquare.Rank-blackKingSquare.Rank)+Math.Abs(whiteKingSquare.File-blackKingSquare.File))*KingEndgameDistanceWeight);
@@ -79,9 +76,6 @@ public static class KingEval
 		if (materialDifference < 500) // if black is up material, their king should be closer to the white king
 		{ score+=kingDistance; }
 
-		score+=CalculateDangerousPieceProximityPenalty(board, blackKingSquare, true);
-		score-=CalculateDangerousPieceProximityPenalty(board, whiteKingSquare, false);
-
 		return score;
 	}
 
@@ -89,19 +83,21 @@ public static class KingEval
 	///  In the opening and middlegame, we want kings farther away from the center and in the corners of their own side
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short KingPositionSafetyNormal(Board board)
+	static short KingPositionSafetyNormal(Square whiteKingSquare, Square blackKingSquare)
 	{
-		int whiteKingSquare = board.GetKingSquare(true).Index;
-		int blackKingSquare = board.GetKingSquare(false).Index;
-
-		return (short) (WhiteKingNormalScores[whiteKingSquare]-BlackKingNormalScores[blackKingSquare]);
+		return (short) (WhiteKingNormalScores[whiteKingSquare.Index]-BlackKingNormalScores[blackKingSquare.Index]);
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static short Evaluate(Board board, int materialDifference)
 	{
-		if (GamePhaseUtils.IsEndgame(board)) return KingPositionSafetyEndgame(board, materialDifference);
+		Square whiteKingSquare = board.GetKingSquare(true);
+		Square blackKingSquare = board.GetKingSquare(false);
 
-		return KingPositionSafetyNormal(board);
+		short dangerousPieceProximityScore = (short) (CalculateDangerousPieceProximityScore(board, whiteKingSquare, false)-CalculateDangerousPieceProximityScore(board, blackKingSquare, true));
+
+		if (GamePhaseUtils.IsEndgame(board)) return (short) (KingPositionSafetyEndgame(whiteKingSquare, blackKingSquare, materialDifference)+dangerousPieceProximityScore);
+
+		return (short) (KingPositionSafetyNormal(whiteKingSquare, blackKingSquare)+dangerousPieceProximityScore);
 	}
 }

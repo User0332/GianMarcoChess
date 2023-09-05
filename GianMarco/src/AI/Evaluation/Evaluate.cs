@@ -3,7 +3,6 @@ using ChessChallenge.API;
 using GianMarco.Evaluation.KingSafety;
 using GianMarco.Evaluation.Pawn;
 using System.Runtime.CompilerServices;
-using System.Reflection.Metadata;
 using GianMarco.Evaluation.Outpost;
 using GianMarco.Evaluation.Position;
 
@@ -37,9 +36,9 @@ public static class Evaluator
 	public static int ExtractMateInNMoves(int score)
 	{
 		if (score < Constants.MinEval+500)
-			return (int) Math.Ceiling((double) (Constants.MinEval-score)/2); // MinEval-score so we get a negative value; opponent (black) is getting mated
+			return (int) Math.Floor((double) (Constants.MinEval-score)/2); // MinEval-score so we get a negative value; opponent (black) is getting mated
 
-		return (int) Math.Floor((double) (Constants.MaxEval-score)/2);
+		return (int) Math.Ceiling((double) (Constants.MaxEval-score)/2);
 	}
 
 	public static int EvalPosition(Board board)

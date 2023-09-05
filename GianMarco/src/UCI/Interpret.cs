@@ -91,6 +91,8 @@ public static class PreBuiltInterpreter
 			searchTimeMs = int.Parse(moveTimeString);
 		}
 
+		searchTimeMs = Math.Min(searchTimeMs, 15000); // have the bot take no more than 15 sec for every move
+
 		searcher = new(currBoard, searchDepth);
 		searcher.Search();
 
