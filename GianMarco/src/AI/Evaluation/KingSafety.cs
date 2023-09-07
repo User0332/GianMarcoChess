@@ -41,7 +41,7 @@ public static class KingEval
 
 	const short KingEndgameDistanceWeight = 25;
 
-	const short DangerousPieceProximityWeight = 15;
+	const short DangerousPieceProximityWeight = 30; // king safety is important!!!
 
 	static short CalculateDangerousPieceProximityScore(Board board, Square kingSquare, bool whiteIsAttacking)
 	{

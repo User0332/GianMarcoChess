@@ -1,4 +1,5 @@
 using ChessChallenge.API;
+using GianMarco.Evaluation;
 using GianMarco.Search;
 
 namespace GianMarco.UCI;
@@ -60,7 +61,7 @@ public static class PreBuiltInterpreter
 		}
 
 		int wtimeIdx = -1;
-		int wTimeMs = int.MaxValue;
+		int wTimeMs = 0;
 
 		if ((wtimeIdx = Array.IndexOf(cmdArgs, "wtime")) != -1)
 		{
@@ -70,7 +71,7 @@ public static class PreBuiltInterpreter
 		}
 
 		int btimeIdx = -1;
-		int bTimeMs = int.MaxValue;
+		int bTimeMs = 0;
 
 		if ((btimeIdx = Array.IndexOf(cmdArgs, "btime")) != -1)
 		{
@@ -96,7 +97,8 @@ public static class PreBuiltInterpreter
 		searcher = new(currBoard, searchDepth);
 		searcher.Search();
 
-		Task.Delay(searchTimeMs).ContinueWith(task => searcher.EndSearch());
+		if (searchTimeMs != 0)
+			Task.Delay(searchTimeMs).ContinueWith(task => searcher.EndSearch());
 	}
 
 	static void Stop()
@@ -136,6 +138,9 @@ public static class PreBuiltInterpreter
 					break;
 				case "go":
 					Go(cmdArgs);
+					break;
+				case "staticeval": // not uci, just for debugging evals
+					Console.WriteLine(Evaluator.EvalPosition(currBoard));
 					break;
 				case "stop":
 					Stop();

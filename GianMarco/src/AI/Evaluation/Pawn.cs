@@ -38,7 +38,14 @@ public static class PawnEval
 	static ulong GetFrontViewMask(Square square, bool white)
 	{
 		ulong fileMask = GetPawnSurroundingMask(square);
-		short shifter = (short) (8 * (square.Rank+1));
+
+		short shifter;
+		
+		if (white)
+			shifter = (short) (8 * (square.Rank+1));
+		else
+			shifter = (short) (8*(8-square.Rank+1));
+
 		ulong frontMask = white ? (ulong.MaxValue << shifter) : (ulong.MaxValue >> shifter);
 
 		return frontMask & fileMask;

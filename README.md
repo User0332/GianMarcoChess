@@ -8,8 +8,15 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - Fix endgme checkmates (problem found w/ king & queen vs. king -- finds forced checkmate sequence but loses the sequence on the next few moves)
 - Add pondering
 - Maybe - add bias against draw (by modifying (`GianMarco.Evaluation.Constants.DrawValue`))
-- Find out why evals always start at +3 for black (note: this started happening after the passed/isolated/stacked pawn eval impl.)
 - Fix bugs in move line generation
+- Add eval that encourages bot to develop pieces
+- Add eval for rooks
+	- Rooks on open files
+	- Doubled rooks (and queens)
+	- Increase rook weight in endgame
+- Maybe add specialized endgame puzzle evals (e.g. if its endgame and its rook & king vs king, have a more specialized eval for checkmate)
+- Add opposition eval for king endgame
+- Also add king vs pawn vs king eval
 
 ## Changelog
 - Started late (started 9/1/23, not all changes from 9/1/23 are listed)
@@ -25,3 +32,4 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - 9/3/23 - Added null move pruning
 - 9/4/23 - Removed move lines for alpha-beta pruning (as they gave no benefit and move lines are bugged)
 - 9/4/23 - Removed null move pruning as it caused the bot to blunder pieces (possibly due to low search depths)
+- 9/7/23 - Fix bug in black passed pawn evaluation bitmask

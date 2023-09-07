@@ -44,7 +44,6 @@ public static class Evaluator
 	public static int EvalPosition(Board board)
 	{
 		int score = MaterialEval.CountMaterial(board);
-
 		score+=KingEval.Evaluate(board, score);
 		score+=PawnEval.Evaluate(board);
 		score+=OutpostEval.Evaluate(board);
