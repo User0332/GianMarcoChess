@@ -2,12 +2,12 @@ using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 using GianMarco.Search.Utils;
 
-namespace GianMarco.Evaluation.KingSafety;
-
-public static class KingEval
+namespace GianMarco.Evaluation.King;
+// TODO: be able to calculate piece distance using index so we can optimize out the new Square() and only use index instead
+public static class KingSafety
 {
 	static readonly short[] WhiteKingNormalScores = {
-		25, 30, 25, 15, 15, 25, 35, 25,
+		25, 35, 25, 15, 15, 25, 35, 25,
 		20, 20, 20, 10, 10, 20, 20, 20,
 		10, 10, 10, 0 , 0 , 10, 10, 10,
 		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
@@ -25,7 +25,7 @@ public static class KingEval
 		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,		
 		10, 10, 10, 0 , 0 , 10, 10, 10,
 		20, 20, 20, 10, 10, 20, 20, 20,
-		25, 30, 25, 15, 15, 25, 35, 25,
+		25, 35, 25, 15, 15, 25, 35, 25,
 	};
 
 	static readonly short[] KingEndgameScores = {
@@ -43,15 +43,27 @@ public static class KingEval
 
 	const short DangerousPieceProximityWeight = 30; // king safety is important!!!
 
-	static short CalculateDangerousPieceProximityScore(Board board, Square kingSquare, bool whiteIsAttacking)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static short CalculateSquareDistance(int squareOne, int squareTwo)
+	{
+		(int rankOne, int fileOne) = (squareOne >> 3, squareOne & 0b000111);
+		(int rankTwo, int fileTwo) = (squareTwo >> 3, squareTwo & 0b000111);
+
+		short fileDistance = (short) Math.Abs(fileOne-fileTwo);
+		short rankDistance = (short) Math.Abs(rankOne-rankTwo);
+
+		return (short) (fileDistance+rankDistance);
+	}
+
+	static short CalculateDangerousPieceProximityScore(Board board, int kingSquare, bool whiteIsAttacking)
 	{
 		short score = 0;
 
-		PieceList queens = board.GetPieceList(PieceType.Queen, whiteIsAttacking);
+		PieceList queens = board.allPieceLists[whiteIsAttacking ? ChessChallenge.Chess.PieceHelper.WhiteQueen: ChessChallenge.Chess.PieceHelper.BlackQueen];
 
 		foreach (var queen in queens)
 		{
-			short distance = (short) (Math.Abs(queen.Square.Rank-kingSquare.Rank)+Math.Abs(queen.Square.File-kingSquare.File));
+			short distance = CalculateSquareDistance(queen.Square.Index, kingSquare);
 			if (distance == 1) continue; // queen is right next to king
 
 			score+=(short) (distance*DangerousPieceProximityWeight); // the farther dangerous pieces are from our king, the better
@@ -64,11 +76,11 @@ public static class KingEval
 	///  In the endgame, we want kings farther away from the corners
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short KingPositionSafetyEndgame(Square whiteKingSquare, Square blackKingSquare, int materialDifference)
+	static short KingPositionSafetyEndgame(int whiteKingSquare, int blackKingSquare, int materialDifference)
 	{
-		short score = (short) (KingEndgameScores[whiteKingSquare.Index]-KingEndgameScores[blackKingSquare.Index]);
+		short score = (short) (KingEndgameScores[whiteKingSquare]-KingEndgameScores[blackKingSquare]);
 
-		short kingDistance = (short) ((Math.Abs(whiteKingSquare.Rank-blackKingSquare.Rank)+Math.Abs(whiteKingSquare.File-blackKingSquare.File))*KingEndgameDistanceWeight);
+		short kingDistance = (short) (CalculateSquareDistance(whiteKingSquare, blackKingSquare)*KingEndgameDistanceWeight);
 
 		if (materialDifference > 500) // if white is up material, their king should be closer to the black king
 		{ score-=kingDistance; }
@@ -83,16 +95,16 @@ public static class KingEval
 	///  In the opening and middlegame, we want kings farther away from the center and in the corners of their own side
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short KingPositionSafetyNormal(Square whiteKingSquare, Square blackKingSquare)
+	static short KingPositionSafetyNormal(int whiteKingSquare, int blackKingSquare)
 	{
-		return (short) (WhiteKingNormalScores[whiteKingSquare.Index]-BlackKingNormalScores[blackKingSquare.Index]);
+		return (short) (WhiteKingNormalScores[whiteKingSquare]-BlackKingNormalScores[blackKingSquare]);
 	}
 	
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static short Evaluate(Board board, int materialDifference)
 	{
-		Square whiteKingSquare = board.GetKingSquare(true);
-		Square blackKingSquare = board.GetKingSquare(false);
+		int whiteKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex];
+		int blackKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex];
 
 		short dangerousPieceProximityScore = (short) (CalculateDangerousPieceProximityScore(board, whiteKingSquare, false)-CalculateDangerousPieceProximityScore(board, blackKingSquare, true));
 

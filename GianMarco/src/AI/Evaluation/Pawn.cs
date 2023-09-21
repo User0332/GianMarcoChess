@@ -42,9 +42,9 @@ public static class PawnEval
 		short shifter;
 		
 		if (white)
-			shifter = (short) (8 * (square.Rank+1));
+			shifter = (short) ((square.Rank+1) << 3); // << 3 same as * 8
 		else
-			shifter = (short) (8*(8-square.Rank+1));
+			shifter = (short) ((8-square.Rank+1) << 3);
 
 		ulong frontMask = white ? (ulong.MaxValue << shifter) : (ulong.MaxValue >> shifter);
 
@@ -60,13 +60,9 @@ public static class PawnEval
 			(FileBitBoard << Math.Min(7, square.File+1));
 	}
 
-	static short EvaluatePassedPawnsForColor(Board board, bool white)
+	static short EvaluatePassedPawnsForColor(PieceList pawns, ulong enemyPawns, bool white)
 	{
 		short score = 0;
-
-		ulong enemyPawns = board.GetPieceBitboard(PieceType.Pawn, !white);
-
-		PieceList pawns = board.GetPieceList(PieceType.Pawn, white);
 
 		foreach (Piece pawn in pawns)
 		{
@@ -80,18 +76,15 @@ public static class PawnEval
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short EvaluatePassedPawns(Board board)
+	static short EvaluatePassedPawns(PieceList whitePawns, PieceList blackPawns, ulong whitePawnBitboard, ulong blackPawnBitboard)
 	{
-		return (short) (EvaluatePassedPawnsForColor(board, true)-EvaluatePassedPawnsForColor(board, false));
+		return (short) (EvaluatePassedPawnsForColor(whitePawns, blackPawnBitboard, true)-EvaluatePassedPawnsForColor(blackPawns, whitePawnBitboard, false));
 	}
 
-	static short EvaluateStackedPawnsForColor(Board board, bool white)
+	// TODO: only use bitboards to calculate this
+	static short EvaluateStackedPawnsForColor(PieceList pawns, ulong friendlyPawnBitboard)
 	{
 		short penalty = 0;
-		
-		ulong friendlyPawnBitboard = board.GetPieceBitboard(PieceType.Pawn, white);
-
-		PieceList pawns = board.GetPieceList(PieceType.Pawn, white);
 
 		foreach (Piece pawn in pawns)
 		{
@@ -110,18 +103,14 @@ public static class PawnEval
 	/// </summary>
 	/// <returns>the penalty value of both players combined into a single value (this value must be SUBTRACTED from the final eval)</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short EvaluateStackedPawnPenalty(Board board)
+	static short EvaluateStackedPawnPenalty(PieceList whitePawns, PieceList blackPawns, ulong whitePawnBitboard, ulong blackPawnBitboard)
 	{
-		return (short) (EvaluateStackedPawnsForColor(board, true)-EvaluateStackedPawnsForColor(board, false));
+		return (short) (EvaluateStackedPawnsForColor(whitePawns, whitePawnBitboard)-EvaluateStackedPawnsForColor(blackPawns, blackPawnBitboard));
 	}
 
-	static short EvaluateIsolatedPawnsForColor(Board board, bool white)
+	static short EvaluateIsolatedPawnsForColor(PieceList pawns, ulong friendlyPawnBitboard)
 	{
 		short penalty = 0;
-
-		ulong friendlyPawnBitboard = board.GetPieceBitboard(PieceType.Pawn, white);
-
-		PieceList pawns = board.GetPieceList(PieceType.Pawn, white);
 
 		foreach (Piece pawn in pawns)
 		{
@@ -139,19 +128,19 @@ public static class PawnEval
 	/// </summary>
 	/// <returns>the penalty value of both players combined into a single value (this value must be SUBTRACTED from the final eval)</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short EvaluateIsolatedPawnPenalty(Board board)
+	static short EvaluateIsolatedPawnPenalty(PieceList whitePawns, PieceList blackPawns, ulong whitePawnBitboard, ulong blackPawnBitboard)
 	{
-		return (short) (EvaluateIsolatedPawnsForColor(board, true)-EvaluateIsolatedPawnsForColor(board, false));
+		return (short) (EvaluateIsolatedPawnsForColor(whitePawns, whitePawnBitboard)-EvaluateIsolatedPawnsForColor(blackPawns, blackPawnBitboard));
 	}
 
-	static short EvaluatePushedPawns(Board board)
+	static short EvaluatePushedPawns(PieceList whitePawns, PieceList blackPawns)
 	{
 		short score = 0;
 
-		foreach (var whitePawn in board.GetPieceList(PieceType.Pawn, true))
+		foreach (var whitePawn in whitePawns)
 			score+=WhitePawnRankBonus[whitePawn.Square.Index];
 
-		foreach (var blackPawn in board.GetPieceList(PieceType.Pawn, false))
+		foreach (var blackPawn in blackPawns)
 			score+=BlackPawnRankBonus[blackPawn.Square.Index];
 
 		return score;
@@ -159,11 +148,17 @@ public static class PawnEval
 
 	public static short Evaluate(Board board)
 	{
-		short score = EvaluatePushedPawns(board);
+		PieceList whitePawns = board.allPieceLists[ChessChallenge.Chess.PieceHelper.WhitePawn];
+		PieceList blackPawns = board.allPieceLists[ChessChallenge.Chess.PieceHelper.BlackPawn];
 
-		score-=EvaluateIsolatedPawnPenalty(board); // note the subtraction
-		score-=EvaluateStackedPawnPenalty(board); // note the subtraction
-		score+=EvaluatePassedPawns(board);
+		ulong whitePawnBitboard = board.board.pieceBitboards[ChessChallenge.Chess.PieceHelper.WhitePawn];
+		ulong blackPawnBitboard = board.board.pieceBitboards[ChessChallenge.Chess.PieceHelper.BlackPawn];
+
+		short score = EvaluatePushedPawns(whitePawns, blackPawns);
+
+		score-=EvaluateIsolatedPawnPenalty(whitePawns, blackPawns, whitePawnBitboard, blackPawnBitboard); // note the subtraction
+		score-=EvaluateStackedPawnPenalty(whitePawns, blackPawns, whitePawnBitboard, blackPawnBitboard); // note the subtraction
+		score+=EvaluatePassedPawns(whitePawns, blackPawns, whitePawnBitboard, blackPawnBitboard);
 
 		return score;
 	}

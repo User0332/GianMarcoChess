@@ -1,10 +1,14 @@
-using GianMarco.Evaluation.Material;
 using ChessChallenge.API;
-using GianMarco.Evaluation.KingSafety;
-using GianMarco.Evaluation.Pawn;
 using System.Runtime.CompilerServices;
+using GianMarco.Evaluation.Material;
+using GianMarco.Evaluation.King;
+using GianMarco.Evaluation.Pawn;
 using GianMarco.Evaluation.Outpost;
 using GianMarco.Evaluation.Position;
+using GianMarco.Search.Utils;
+using GianMarco.Evaluation.Endgame;
+using System.Diagnostics;
+using GianMarco.Optimization;
 
 namespace GianMarco.Evaluation;
 
@@ -43,11 +47,46 @@ public static class Evaluator
 
 	public static int EvalPosition(Board board)
 	{
+		var stp = new Stopwatch();
+
+		stp.Start();
 		int score = MaterialEval.CountMaterial(board);
-		score+=KingEval.Evaluate(board, score);
+		stp.Stop();
+
+		BottleneckFinder.LogRuntime(EvalFunc.MaterialCount, (ulong) stp.ElapsedTicks);
+
+		stp.Restart();
+		score+=KingSafety.Evaluate(board, score);
+		stp.Stop();
+
+		BottleneckFinder.LogRuntime(EvalFunc.KingSafety, (ulong) stp.ElapsedTicks);
+
+		stp.Restart();		
 		score+=PawnEval.Evaluate(board);
+		stp.Stop();
+
+		BottleneckFinder.LogRuntime(EvalFunc.Pawn, (ulong) stp.ElapsedTicks);
+		
+		stp.Restart();
 		score+=OutpostEval.Evaluate(board);
+		stp.Stop();
+
+		BottleneckFinder.LogRuntime(EvalFunc.Outpost, (ulong) stp.ElapsedTicks);
+		
+		stp.Restart();
 		score+=PositionalEval.Evaluate(board);
+		stp.Stop();
+
+		BottleneckFinder.LogRuntime(EvalFunc.Positional, (ulong) stp.ElapsedTicks);
+
+		// Endgame Only Evals (to help with checkmates and puzzles)
+		if (GamePhaseUtils.IsEndgame(board))
+		{
+			score+=BishopMate.Evaluate(board);
+			score+=BishopAndKnightMate.Evaluate(board);
+			score+=ThreeKnightsMate.Evaluate(board);
+			score+=PawnEndgame.Evaluate(board);
+		}
 
 		return score;
 	}

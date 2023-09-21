@@ -112,7 +112,9 @@ public static class PreBuiltInterpreter
 	{
 		while (true)
 		{	
-			string cmd = Console.ReadLine();
+			string? cmd = Console.ReadLine();
+
+			if (cmd is null) return;
 
 			string[] cmdArgs = cmd.Split();
 

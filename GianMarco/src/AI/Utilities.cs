@@ -24,9 +24,10 @@ static class GamePhaseUtils
 
 static class MoveOrdering
 {
-	const short CaptureBonus = 200;
-	const short PromotionBonus = 400;
-	const short CastleBonus = 300;
+	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
+	public static short CaptureBonus = 937;
+	public static short PromotionBonus = 347;
+	public static short CastleBonus = 66;
 
 	static void QSort(in Span<Move> values, in Span<short> scores, int low, int high)
 	{
@@ -58,7 +59,8 @@ static class MoveOrdering
 		return i + 1;
 	}
 
-	static short CalculateMoveScore(Move move)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static short CalculateMoveScore(Move move)
 	{
 		short score = 0;
 
@@ -73,23 +75,14 @@ static class MoveOrdering
 
 		return score;
 	}
-	static void OrderEndgame(in Span<Move> moves) { OrderOther(in moves); }
-	static void OrderOther(in Span<Move> moves)
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static void OrderMoves(Board board, ref Span<Move> moves)
 	{
 		Span<short> scores = stackalloc short[moves.Length];
 
 		for (byte i=0; i<moves.Length; i++) scores[i] = CalculateMoveScore(moves[i]);
 
 		QSort(in moves, in scores, 0, moves.Length-1);
-	}
-
-	
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void OrderMoves(Board board, ref Span<Move> moves)
-	{
-		if (GamePhaseUtils.IsEndgame(board)) { OrderEndgame(moves); return; }
-
-		OrderOther(moves);
 	}
 }

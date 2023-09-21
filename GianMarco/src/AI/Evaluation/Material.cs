@@ -11,31 +11,31 @@ public static class MaterialEval
 	public const short KnightValue = 300;
 	public const short RookValue = 500;
 	public const short QueenValue = 900;
-	public const short KingValue = 1000;
+	public const short KingValue = 10000;
+	public static readonly short[] PieceValuesAccordingToType = {
+		0, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, KingValue
+	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static short GetPieceValue(PieceType pieceType)
 	{
-		return pieceType switch
-		{
-			PieceType.Pawn => 100,
-			PieceType.Bishop => 300,
-			PieceType.Knight => 300,
-			PieceType.Rook => 500,
-			PieceType.Queen => 900,
-			PieceType.King => 1000,
-			_ => throw new ArgumentException("Unknown Piece Type!"),
-		};
+		return PieceValuesAccordingToType[(int) pieceType];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static byte GetCount(Board board, PieceType pieceType, bool white)
+	public static short GetPieceValue(int pieceType)
 	{
-		return (byte) BitOperations.PopCount(board.GetPieceBitboard(pieceType, white));
+		return PieceValuesAccordingToType[pieceType];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short GetCombinedMaterialValue(Board board, PieceType pieceType, bool white)
+	public static byte GetCount(Board board, int pieceType, bool white)
+	{
+		return (byte) BitOperations.PopCount(board.board.pieceBitboards[white ? pieceType : pieceType | 8]);
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static short GetCombinedMaterialValue(Board board, int pieceType, bool white)
 	{
 		return (short) (GetCount(board, pieceType, white)*GetPieceValue(pieceType));
 	}
@@ -44,11 +44,11 @@ public static class MaterialEval
 	public static short CountMaterial(Board board)
 	{
 		return (short) (
-			GetCombinedMaterialValue(board, PieceType.Pawn, true)-GetCombinedMaterialValue(board, PieceType.Pawn, false)+
-			GetCombinedMaterialValue(board, PieceType.Knight, true)-GetCombinedMaterialValue(board, PieceType.Knight, false)+
-			GetCombinedMaterialValue(board, PieceType.Bishop, true)-GetCombinedMaterialValue(board, PieceType.Bishop, false)+
-			GetCombinedMaterialValue(board, PieceType.Rook, true)-GetCombinedMaterialValue(board, PieceType.Rook, false)+
-			GetCombinedMaterialValue(board, PieceType.Queen, true)-GetCombinedMaterialValue(board, PieceType.Queen, false)
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, false)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, false)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, false)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Rook, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Rook, false)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Queen, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Queen, false)
 		);
 	}
 }

@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
+using GianMarco.Optimization;
 using GianMarco.Search.Utils;
 using GianMarco.TTable;
 
@@ -15,6 +15,7 @@ class BasicSearch
 	const byte TTSizeMB = 64;
 	const byte ExtensionCap = 10;
 	const short NullMovePruneThreshold = 20;
+	const short FutilityPruneMoveScoreThreshold = 300; // THIS SHOULD BE EQUAL TO THE MoveOrdering.CastleBonus VALUE
 	public const byte MAX_LINE_SIZE = 10;
 
 	private readonly List<Move>? customOrdered;
@@ -180,6 +181,7 @@ class BasicSearch
 		}
 
 		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
+		if (depthFromRoot < 10) currLineBuilder[depthFromRoot] = bestMove;
 
 		return alpha;
 	}
@@ -255,7 +257,7 @@ class BasicSearch
 			{
 				if (depthFromRoot < 10) currLineBuilder[depthFromRoot] = Move.NullMove;
 				return WorstEvalForBot();
-			}
+			}			
 
 			NodesSearched++;
 			
@@ -269,6 +271,7 @@ class BasicSearch
 
 			if (eval >= beta)
 			{
+				if (depthFromRoot < 10) currLineBuilder[depthFromRoot] = Move.NullMove;
 				tt.StoreEvaluation(depth, beta, TranspositionTable.LowerBound, move);
 				return beta;
 			}
@@ -331,6 +334,8 @@ class IterDeepSearch
 
 				if (endSearchFlag) return;
 			}
+
+			EndSearch();
 		}).Start();
 	}
 
@@ -353,6 +358,8 @@ class IterDeepSearch
 		Console.WriteLine($"info depth {searches.Count} seldepth {lastSearch.MaxDepthSearched} time {lastSearch.TimeSearchedMs} nodes {lastSearch.NodesSearched} score {scoreString} pv {lineString}");
 
 		Console.WriteLine($"bestmove {moveName}");
+
+		// BottleneckFinder.PrintResults();
 
 		return lastSearch.BestMove;
 	}
