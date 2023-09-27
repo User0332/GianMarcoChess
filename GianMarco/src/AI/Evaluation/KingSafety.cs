@@ -64,6 +64,7 @@ public static class KingSafety
 		foreach (var queen in queens)
 		{
 			short distance = CalculateSquareDistance(queen.Square.Index, kingSquare);
+
 			if (distance == 1) continue; // queen is right next to king
 
 			score+=(short) (distance*DangerousPieceProximityWeight); // the farther dangerous pieces are from our king, the better
@@ -104,7 +105,7 @@ public static class KingSafety
 	public static short Evaluate(Board board, int materialDifference)
 	{
 		int whiteKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex];
-		int blackKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex];
+		int blackKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.BlackIndex];
 
 		short dangerousPieceProximityScore = (short) (CalculateDangerousPieceProximityScore(board, whiteKingSquare, false)-CalculateDangerousPieceProximityScore(board, blackKingSquare, true));
 

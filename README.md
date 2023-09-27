@@ -4,11 +4,11 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 
 ## Todo
 - Add more pruning techniques for increased depth
-- Look into why initial evals for passed pawns come out to ~ -300 cp
+- Look into why initial evals comes out to ~275 cp - IMPORTANT
+- Fix bugs in move line generation - IMPORTANT
 - Fix endgme checkmates (problem found w/ king & queen vs. king -- finds forced checkmate sequence but loses the sequence on the next few moves)
 - Add pondering
 - Maybe - add bias against draw (by modifying (`GianMarco.Evaluation.Constants.DrawValue`))
-- Fix bugs in move line generation
 - Add eval that encourages bot to develop pieces
 - Add eval for rooks
 	- Rooks on open files
@@ -17,8 +17,10 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - Maybe add specialized endgame puzzle evals (e.g. if its endgame and its rook & king vs king, have a more specialized eval for checkmate)
 - Add opposition eval for king endgame
 - Also add king vs pawn vs king eval
+- Add pruning to not search big sacrifices when a depth of 5+ (or some other arbitrary number) after the sac will not be searched
+- Allow transposition table to have rotated boards
 
-## Changelog
+## Changelog -- Discontinued
 - Started late (started 9/1/23, not all changes from 9/1/23 are listed)
 - 9/1/23 - Added search extension for checks
 - 9/1/23 - Included quiescence & extension search depth in final depth output

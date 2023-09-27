@@ -61,26 +61,26 @@ public static class PreBuiltInterpreter
 		}
 
 		int wtimeIdx = -1;
-		int wTimeMs = 0;
+		ulong wTimeMs = 0;
 
 		if ((wtimeIdx = Array.IndexOf(cmdArgs, "wtime")) != -1)
 		{
 			string wtimeString = cmdArgs[wtimeIdx+1];
 
-			wTimeMs = int.Parse(wtimeString);
+			wTimeMs = ulong.Parse(wtimeString);
 		}
 
 		int btimeIdx = -1;
-		int bTimeMs = 0;
+		ulong bTimeMs = 0;
 
 		if ((btimeIdx = Array.IndexOf(cmdArgs, "btime")) != -1)
 		{
 			string btimeString = cmdArgs[btimeIdx+1];
 			
-			bTimeMs = int.Parse(btimeString);
+			bTimeMs = ulong.Parse(btimeString);
 		}
 
-		int searchTimeMs = (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/20;
+		int searchTimeMs = (int) (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/20;
 
 
 		int moveTimeIdx = -1;
@@ -92,7 +92,7 @@ public static class PreBuiltInterpreter
 			searchTimeMs = int.Parse(moveTimeString);
 		}
 
-		searchTimeMs = Math.Min(searchTimeMs, 15000); // have the bot take no more than 15 sec for every move
+		searchTimeMs = Math.Min(searchTimeMs, 5000); // have the bot take no more than 5 sec for every move
 
 		searcher = new(currBoard, searchDepth);
 		searcher.Search();

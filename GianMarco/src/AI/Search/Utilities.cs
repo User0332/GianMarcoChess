@@ -28,6 +28,18 @@ static class MoveOrdering
 	public static short CaptureBonus = 937;
 	public static short PromotionBonus = 347;
 	public static short CastleBonus = 66;
+	public const byte MaxKillerMovePly = 20;
+	public const short FirstKillerMoveBias = 800;
+	public const short SecondKillerMoveBias = 700;
+	public static Move[][] killerMoves = new Move[MaxKillerMovePly][] { 
+		new Move[2], new Move[2], new Move[2], new Move[2],
+		new Move[2], new Move[2], new Move[2], new Move[2],
+		new Move[2], new Move[2], new Move[2], new Move[2],
+		new Move[2], new Move[2], new Move[2], new Move[2],
+		new Move[2], new Move[2], new Move[2], new Move[2],
+	};
+
+	public static short[,] searchHistory = new short[64, 64];
 
 	static void QSort(in Span<Move> values, in Span<short> scores, int low, int high)
 	{
@@ -60,28 +72,41 @@ static class MoveOrdering
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short CalculateMoveScore(Move move)
+	public static short CalculateMoveScore(Move move, bool inNormalSearch, ushort depthFromRoot)
 	{
 		short score = 0;
 
 		if (move.IsCapture)
 			score+=(short) (CaptureBonus+MaterialEval.GetPieceValue(move.CapturePieceType)-MaterialEval.GetPieceValue(move.MovePieceType));
 		
-		if (move.IsPromotion)
+		else if (move.IsPromotion)
 			score+=(short) (PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType));
-		
-		if (move.IsCastles)
-			score+=CastleBonus;
+		else
+		{
+			if (move.IsCastles)
+				score+=CastleBonus;
+
+			// killer move ordering
+			if 	(inNormalSearch && (depthFromRoot < MaxKillerMovePly))
+			{
+				if (killerMoves[depthFromRoot][0].Equals(move))
+					score+=FirstKillerMoveBias;
+
+				else if (killerMoves[depthFromRoot][1].Equals(move))
+					score+=SecondKillerMoveBias;
+			}
+		}
+
 
 		return score;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void OrderMoves(Board board, ref Span<Move> moves)
+	public static void OrderMoves(Board board, ref Span<Move> moves, bool inNormalSearch, ushort depthFromRoot)
 	{
 		Span<short> scores = stackalloc short[moves.Length];
 
-		for (byte i=0; i<moves.Length; i++) scores[i] = CalculateMoveScore(moves[i]);
+		for (byte i=0; i<moves.Length; i++) scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot);
 
 		QSort(in moves, in scores, 0, moves.Length-1);
 	}

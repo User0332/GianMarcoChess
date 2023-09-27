@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
 namespace GianMarco.TTable;
@@ -31,6 +32,7 @@ public class TranspositionTable
 		get => board.ZobristKey % size;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public int LookupEval(int depth, int alpha, int beta)
 	{
 		if (!Enabled) return LookupFailed;
@@ -49,6 +51,7 @@ public class TranspositionTable
 		return LookupFailed;
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void StoreEvaluation(ushort depth, int eval, byte evalType, Move move)
 	{
 		if (!Enabled) return;

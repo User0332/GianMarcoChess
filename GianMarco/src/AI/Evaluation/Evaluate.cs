@@ -47,37 +47,15 @@ public static class Evaluator
 
 	public static int EvalPosition(Board board)
 	{
-		var stp = new Stopwatch();
-
-		stp.Start();
 		int score = MaterialEval.CountMaterial(board);
-		stp.Stop();
 
-		BottleneckFinder.LogRuntime(EvalFunc.MaterialCount, (ulong) stp.ElapsedTicks);
-
-		stp.Restart();
 		score+=KingSafety.Evaluate(board, score);
-		stp.Stop();
-
-		BottleneckFinder.LogRuntime(EvalFunc.KingSafety, (ulong) stp.ElapsedTicks);
-
-		stp.Restart();		
+		
 		score+=PawnEval.Evaluate(board);
-		stp.Stop();
 
-		BottleneckFinder.LogRuntime(EvalFunc.Pawn, (ulong) stp.ElapsedTicks);
-		
-		stp.Restart();
 		score+=OutpostEval.Evaluate(board);
-		stp.Stop();
 
-		BottleneckFinder.LogRuntime(EvalFunc.Outpost, (ulong) stp.ElapsedTicks);
-		
-		stp.Restart();
 		score+=PositionalEval.Evaluate(board);
-		stp.Stop();
-
-		BottleneckFinder.LogRuntime(EvalFunc.Positional, (ulong) stp.ElapsedTicks);
 
 		// Endgame Only Evals (to help with checkmates and puzzles)
 		if (GamePhaseUtils.IsEndgame(board))
