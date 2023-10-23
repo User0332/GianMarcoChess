@@ -10,7 +10,7 @@ public static class PawnEval
 	const short StackedPawnPenalty = 20;
 	const short IsolatedPawnPenalty = 25;
 
-	static readonly short[] WhitePawnRankBonus = {
+	static readonly byte[] WhitePawnRankBonus = {
 		0, 0, 0, 0, 0, 0, 0, 0, // first rank only needed to keep indexes correct, white pawns cannot be here
 		0, 0, 0, 0, 0, 0, 0, 0,
 		5, 5, 5, 5, 5, 5, 5, 5,
@@ -21,7 +21,7 @@ public static class PawnEval
 		// 30, 30, 30, 30, 30, 30, 30, 30, // last rank not needed, white pawns promote here
 	};
 
-	static readonly short[] BlackPawnRankBonus = {
+	static readonly byte[] BlackPawnRankBonus = {
 		// 30, 30, 30, 30, 30, 30, 30, 30, // first rank not needed, black pawns promote here
 		20, 20, 20, 20, 20, 20, 20, 20,
 		10, 10, 10, 10, 10, 10, 10, 10,

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace ChessChallenge.Chess
 {
-    public class RepetitionTable
+    public struct RepetitionTable
     {
         readonly ulong[] hashes;
         readonly int[] startIndices;
@@ -50,7 +50,7 @@ namespace ChessChallenge.Chess
         }
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Contains(ulong h)
+        public readonly bool Contains(ulong h)
         {
             int s = startIndices[count];
             // up to count-1 so that curr position is not counted

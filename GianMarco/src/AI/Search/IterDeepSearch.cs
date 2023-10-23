@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.Arm;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
 using GianMarco.Search.Utils;
@@ -9,7 +10,8 @@ namespace GianMarco.Search;
 class IterDeepSearch
 {
 	public const ushort MAX_DEPTH = 40;
-	public const ushort TTSizeMB = 256;
+	public const ushort TTStackSizeMB = 2;
+	public const ushort TTHeapSizeMB = 115;
 	private const ushort StartDepth = 1;
 	private readonly Board board;
 	private readonly ushort maxDepth;
@@ -18,32 +20,31 @@ class IterDeepSearch
 	private readonly List<BasicSearch> searches = new(20);
 
 	private readonly List<Move> bestMoves = new(20);
-	private readonly TranspositionTable sharedTT;
-
 	public IterDeepSearch(Board board, ushort maxDepth)
 	{
 		if (maxDepth < StartDepth) maxDepth = StartDepth;
 		
 		this.board = board;
 		this.maxDepth = maxDepth;
-		
-		sharedTT = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
 	}
 
 	public void Search()
 	{
 		new Thread(() => {
+			Span<Entry> ttSpan = stackalloc Entry[(int) Math.Floor((double) (TTStackSizeMB*1000000)/Marshal.SizeOf<Entry>())];
+			
+			CombinationTTable sharedTT = new(board, ttSpan, TTHeapSizeMB);
+
 			for (ushort i = StartDepth; i<=maxDepth; i++)
 			{
 				var search = new BasicSearch(
 					board,
-					sharedTT,
 					bestMoves.ToList() // copy the list
 				);
 
 				searches.Add(search);
 
-				Move bestMove = search.Execute(i);
+				Move bestMove = search.Execute(i, sharedTT);
 
 				while (bestMoves.Contains(bestMove)) bestMoves.Remove(bestMove);
 				
@@ -53,7 +54,7 @@ class IterDeepSearch
 			}
 
 			EndSearch();
-		}).Start();
+		}, int.MaxValue).Start();
 	}
 
 	public Move EndSearch()
@@ -75,8 +76,6 @@ class IterDeepSearch
 		Console.WriteLine($"info depth {searches.Count} seldepth {lastSearch.MaxDepthSearched} time {lastSearch.TimeSearchedMs} nodes {lastSearch.NodesSearched} score {scoreString} pv {lineString}");
 
 		Console.WriteLine($"bestmove {moveName}");
-
-		// BottleneckFinder.PrintResults();
 
 		return lastSearch.BestMove;
 	}

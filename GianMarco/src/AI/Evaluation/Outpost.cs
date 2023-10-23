@@ -5,7 +5,7 @@ namespace GianMarco.Evaluation.Outpost;
 
 public static class OutpostEval
 {
-	static readonly short[] WhiteOutpostRankBonuses = {
+	static readonly byte[] WhiteOutpostRankBonuses = {
 		0,
 		0,
 		0,
@@ -16,7 +16,7 @@ public static class OutpostEval
 		20
 	};
 
-	static readonly short[] BlackOutpostRankBonuses = {
+	static readonly byte[] BlackOutpostRankBonuses = {
 		20,
 		30,
 		25,

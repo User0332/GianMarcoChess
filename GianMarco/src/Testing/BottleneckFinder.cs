@@ -6,13 +6,14 @@ public enum EvalFunc : byte
 	Pawn,
 	Outpost,
 	Positional,
-	MaterialCount
+	MaterialCount,
+	CheckEndgame
 }
 
 public static class BottleneckFinder
 {
-	static readonly ulong[] calls = new ulong[5];
-	static readonly ulong[] runtimes = new ulong[5];	
+	static readonly ulong[] calls = new ulong[6];
+	static readonly ulong[] runtimes = new ulong[6];	
 	public static void LogRuntime(EvalFunc func, ulong runtime)
 	{
 		calls[(int) func]+=1;

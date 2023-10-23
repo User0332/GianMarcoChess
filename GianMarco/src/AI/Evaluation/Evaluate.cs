@@ -7,8 +7,6 @@ using GianMarco.Evaluation.Outpost;
 using GianMarco.Evaluation.Position;
 using GianMarco.Search.Utils;
 using GianMarco.Evaluation.Endgame;
-using System.Diagnostics;
-using GianMarco.Optimization;
 
 namespace GianMarco.Evaluation;
 
@@ -55,7 +53,7 @@ public static class Evaluator
 
 		score+=OutpostEval.Evaluate(board);
 
-		score+=PositionalEval.Evaluate(board);
+		score+=PiecePositionalEval.Evaluate(board);
 
 		// Endgame Only Evals (to help with checkmates and puzzles)
 		if (GamePhaseUtils.IsEndgame(board))

@@ -2,13 +2,13 @@
 
 namespace ChessChallenge.Chess
 {
-    public class PieceList
+    public sealed class PieceList
     {
 
         // Indices of squares occupied by given piece type (only elements up to Count are valid, the rest are unused/garbage)
-        public int[] occupiedSquares;
+        public readonly int[] occupiedSquares;
         // Map to go from index of a square, to the index in the occupiedSquares array where that square is stored
-        int[] map;
+        readonly int[] map;
         int numPieces;
 
         public PieceList(int maxPieceCount = 16)

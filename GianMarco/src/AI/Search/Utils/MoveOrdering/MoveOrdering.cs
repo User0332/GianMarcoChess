@@ -4,24 +4,6 @@ using ChessChallenge.API;
 
 namespace GianMarco.Search.Utils;
 
-static class MoveUtils
-{
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static string GetUCI(Move move)
-	{
-		return ChessChallenge.Chess.MoveUtility.GetMoveNameUCI(move.move);
-	}
-}
-
-static class GamePhaseUtils
-{
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool IsEndgame(Board board)
-	{
-		return board.board.totalPieceCountWithoutPawnsAndKings <= 6;
-	}
-}
-
 static class MoveOrdering
 {
 	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
@@ -29,8 +11,11 @@ static class MoveOrdering
 	public static short PromotionBonus = 347;
 	public static short CastleBonus = 66;
 	public const byte MaxKillerMovePly = 20;
-	public const short FirstKillerMoveBias = 800;
-	public const short SecondKillerMoveBias = 700;
+	const short FirstKillerMoveBias = 800;
+	const short SecondKillerMoveBias = 700;
+	const short CloseToFirstKillerMoveBias = 600;
+	const short CloseToSecondKillerMoveBias = 500;
+
 	public static Move[][] killerMoves = new Move[MaxKillerMovePly][] { 
 		new Move[2], new Move[2], new Move[2], new Move[2],
 		new Move[2], new Move[2], new Move[2], new Move[2],
@@ -78,9 +63,6 @@ static class MoveOrdering
 
 		if (move.IsCapture)
 			score+=(short) (CaptureBonus+MaterialEval.GetPieceValue(move.CapturePieceType)-MaterialEval.GetPieceValue(move.MovePieceType));
-		
-		else if (move.IsPromotion)
-			score+=(short) (PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType));
 		else
 		{
 			if (move.IsCastles)
@@ -90,13 +72,15 @@ static class MoveOrdering
 			if 	(inNormalSearch && (depthFromRoot < MaxKillerMovePly))
 			{
 				if (killerMoves[depthFromRoot][0].Equals(move))
-					score+=FirstKillerMoveBias;
+					return (short) (score+FirstKillerMoveBias);
 
-				else if (killerMoves[depthFromRoot][1].Equals(move))
-					score+=SecondKillerMoveBias;
+				if (killerMoves[depthFromRoot][1].Equals(move))
+					return (short) (score+SecondKillerMoveBias);
 			}
 		}
 
+		if (move.IsPromotion)
+			score+=(short) (PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType));
 
 		return score;
 	}

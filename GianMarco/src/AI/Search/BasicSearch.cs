@@ -22,7 +22,6 @@ class BasicSearch
 
 	private readonly List<Move>? customOrdered;
 	private readonly Board board;
-	private readonly TranspositionTable tt;
 	private readonly bool isWhite;
 	public bool SearchEnded = false;
 	public bool KillSearch = false;
@@ -39,7 +38,7 @@ class BasicSearch
 		this.board = board;
 		isWhite = board.IsWhiteToMove;
 		customOrdered = customOrderedMoves;
-		tt = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
+		// tt = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
 		WorstEvalForBot = board.IsWhiteToMove && isWhite ? Constants.MinEval : Constants.MaxEval;
 	}
 
@@ -48,7 +47,7 @@ class BasicSearch
 		this.board = board;
 		isWhite = board.IsWhiteToMove;
 		customOrdered = customOrderedMoves;
-		tt = transpositionTable;
+		// tt = transpositionTable;
 		WorstEvalForBot = board.IsWhiteToMove && isWhite ? Constants.MinEval : Constants.MaxEval;
 	}
 
@@ -65,7 +64,7 @@ class BasicSearch
 		return board.IsInCheck();
 	}
 
-	public Move Execute(ushort depth)
+	public Move Execute(ushort depth, CombinationTTable tt)
 	{
 		long startTimeTicks = DateTime.Now.Ticks;
 
@@ -90,11 +89,16 @@ class BasicSearch
 		currLine.Fill(Move.NullMove);
 
 		int bestScore = Constants.MinEval;
+		
 		Move bestMove = moves[0];
 
 		for (int i = 0; i < moves.Length; i++)
 		{
 			Move move = moves[i];
+
+			#if DEBUG
+			if (move.Equals(new Move("f6g5", board))) DebugFlags.AnalyzeMove = true;
+			#endif
 
 			if (KillSearch) break;
 
@@ -104,7 +108,7 @@ class BasicSearch
 
 			byte extension = (byte) (MovePlayedWasInterestingMove(move) ? 1 : 0);
 
-			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension, ref currLine, true);
+			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension, ref currLine, true, tt);
 
 			board.UndoMove(move);
 
@@ -112,9 +116,20 @@ class BasicSearch
 			{
 				bestScore = score;
 				bestMove = move;
+
 				currLine[0] = move;
 				BestLine = currLine.ToArray();
 			}
+
+			#if DEBUG
+			if (move.Equals(new Move("f6g5", board)))
+			{
+				Console.WriteLine(score);
+				string lineString = string.Join(' ', BestLine.Select(MoveUtils.GetUCI));
+				Console.WriteLine(lineString);
+				DebugFlags.AnalyzeMove = false;
+			}
+			#endif
 		}
 		
 		SearchEnded = true;
@@ -183,7 +198,7 @@ class BasicSearch
 		return alpha;
 	}
 
-	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder, bool nullMovePruningEnabled)
+	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder, bool nullMovePruningEnabled, CombinationTTable tt)
 	{
 		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
 
@@ -201,7 +216,6 @@ class BasicSearch
 
 		if (lookupVal != TranspositionTable.LookupFailed)
 		{
-			if (depthFromRoot < MAX_LINE_SIZE) currLineBuilder[depthFromRoot] = Move.NullMove;
 			return lookupVal;
 		}
 
@@ -211,12 +225,12 @@ class BasicSearch
 		int eval;
 
 		// Null move pruning
-		if (!inCheck && (depth >= 3) && nullMovePruningEnabled)
+		if (!inCheck && (depth >= 4) && nullMovePruningEnabled)
 		{
 			board.MakeMove(Move.NullMove);			
 			Span<Move> throwaway = stackalloc Move[MAX_LINE_SIZE];
 			
-			eval = -NegaMax((ushort) (depth-3), -beta, -beta+1, (ushort) (depthFromRoot+1), ExtensionCap, ref throwaway, false);
+			eval = -NegaMax((ushort) (depth-4), -beta, -beta+1, (ushort) (depthFromRoot+1), ExtensionCap, ref throwaway, false, tt);
 
 			board.UndoMove(Move.NullMove);
 			
@@ -234,11 +248,8 @@ class BasicSearch
 		{
 			if (inCheck)
 			{
-				if (depthFromRoot < MAX_LINE_SIZE) currLineBuilder[depthFromRoot] = Move.NullMove;
 				return Evaluator.MateIn(depthFromRoot);
 			}
-
-			if (depthFromRoot < MAX_LINE_SIZE) currLineBuilder[depthFromRoot] = Move.NullMove;
 
 			return Constants.DrawValue; // stalemate
 		}
@@ -250,7 +261,7 @@ class BasicSearch
 		bool madeQuietMove = false;
 
 		byte evalBound = TranspositionTable.UpperBound;
-		Move bestMove = Move.NullMove;
+		Move bestMove = moves[0];
 
 		for (int i = 0; i < moves.Length; i++)
 		{
@@ -277,7 +288,6 @@ class BasicSearch
 			
 			board.MakeMove(move);
 
-
 			if (!madeQuietMove && !(move.IsCapture || move.IsPromotion)) madeQuietMove = true;
 
 			byte extension = 0; // FOR NOW, EXTENSIONS ARE DISABLED - LEADS TO LESS NODE SEARCHES
@@ -286,16 +296,16 @@ class BasicSearch
 
 			if (foundPV && (extension == 0) && (depth >= 3)) // NOTE: extension == 0 is currently a placeholder for threat detection
 			{
-				eval = -NegaMax((ushort) Math.Min(PVSDepth, depth-3), -alpha-1, -alpha, (ushort) (depthFromRoot+1), ExtensionCap, ref currLine, false);
+				eval = -NegaMax((ushort) Math.Min(PVSDepth, depth-3), -alpha-1, -alpha, (ushort) (depthFromRoot+1), ExtensionCap, ref currLine, false, tt);
 			
 				if ((eval > alpha) && (eval < beta))
 				{
-					eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine, i >= 6);
+					eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine, i >= 8, tt);
 				}
 			}
 			else // Normal AlphaBeta NegaMax
 			{
-				eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine, i >= 6);
+				eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine, i >= 8, tt);
 			}
 
 			board.UndoMove(move);

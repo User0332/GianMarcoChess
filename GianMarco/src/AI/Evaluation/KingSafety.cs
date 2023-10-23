@@ -6,7 +6,7 @@ namespace GianMarco.Evaluation.King;
 // TODO: be able to calculate piece distance using index so we can optimize out the new Square() and only use index instead
 public static class KingSafety
 {
-	static readonly short[] WhiteKingNormalScores = {
+	static readonly sbyte[] WhiteKingNormalScores = {
 		25, 35, 25, 15, 15, 25, 35, 25,
 		20, 20, 20, 10, 10, 20, 20, 20,
 		10, 10, 10, 0 , 0 , 10, 10, 10,
@@ -17,7 +17,7 @@ public static class KingSafety
 		-40,-40,-40,-40,-40,-40,-40,-40,
 	};
 
-	static readonly short[] BlackKingNormalScores = {		
+	static readonly sbyte[] BlackKingNormalScores = {		
 		-40,-40,-40,-40,-40,-40,-40,-40,	
 		-20,-20,-20,-20,-20,-20,-20,-20,
 		-10,-10,-10,-10,-10,-10,-10,-10,		
@@ -28,7 +28,7 @@ public static class KingSafety
 		25, 35, 25, 15, 15, 25, 35, 25,
 	};
 
-	static readonly short[] KingEndgameScores = {
+	static readonly sbyte[] KingEndgameScores = {
 		-10, -5, -5, -5, -5, -5, -5, -10,
 		-5  , 0 , 5 , 5 , 5 , 5 , 0 , -5,
 		-5  , 5 , 5 , 15, 15, 5 , 5 , -5,
