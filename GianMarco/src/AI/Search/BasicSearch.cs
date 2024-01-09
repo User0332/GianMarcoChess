@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
 using GianMarco.Search.Utils;
@@ -15,12 +14,14 @@ class BasicSearch
 	const byte TTSizeMB = 128;
 	const byte ExtensionCap = 10;
 	const short NullMovePruneThreshold = 5;
-	const ushort PVSDepth = 3;
+	const ushort PVSDepth = 2;
 	const short FutilityPruneMoveScoreThreshold = 300; // THIS SHOULD BE EQUAL TO THE MoveOrdering.CastleBonus VALUE
 	const byte DEPTH_GRACE_THRESHOLD = 0;
+	const byte NULL_MOVE_PRUNE_DEPTH = 3;
+	const byte FUTUILITY_PRUNE_DEPTH = 1;
 	public const byte MAX_LINE_SIZE = 10;
 
-	private readonly List<Move>? customOrdered;
+	private readonly List<Move> customOrdered;
 	private readonly Board board;
 	private readonly bool isWhite;
 	public bool SearchEnded = false;
@@ -33,21 +34,12 @@ class BasicSearch
 	public ushort MaxDepthSearched = 0;
 	public uint NodesSearched = 0;
 
-	public BasicSearch(Board board, List<Move>? customOrderedMoves = null)
+	public BasicSearch(Board board, List<Move> customOrderedMoves)
 	{
 		this.board = board;
 		isWhite = board.IsWhiteToMove;
 		customOrdered = customOrderedMoves;
 		// tt = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
-		WorstEvalForBot = board.IsWhiteToMove && isWhite ? Constants.MinEval : Constants.MaxEval;
-	}
-
-	public BasicSearch(Board board, TranspositionTable transpositionTable, List<Move>? customOrderedMoves = null)
-	{
-		this.board = board;
-		isWhite = board.IsWhiteToMove;
-		customOrdered = customOrderedMoves;
-		// tt = transpositionTable;
 		WorstEvalForBot = board.IsWhiteToMove && isWhite ? Constants.MinEval : Constants.MaxEval;
 	}
 
@@ -64,26 +56,25 @@ class BasicSearch
 		return board.IsInCheck();
 	}
 
-	public Move Execute(ushort depth, CombinationTTable tt)
+	public Move Execute(ushort depth, ref CombinationTTable tt)
 	{
 		long startTimeTicks = DateTime.Now.Ticks;
+
+		bool inCheck = board.IsInCheck();
 
 		Span<Move> moves = stackalloc Move[MOVE_STACKALLOC_AMT];
 
 		GetOrderedLegalMoves(ref moves, 0);
 
-		if (customOrdered is not null)
+		// add custom ordered moves to front
+		foreach (Move move in moves)
 		{
-			// add custom ordered moves to front
-			foreach (Move move in moves)
-			{
-				if (customOrdered.Any(item => item.Equals(move))) continue;
+			if (customOrdered.Any(item => item.Equals(move))) continue;
 
-				customOrdered.Add(move);
-			}
-
-			moves = CollectionsMarshal.AsSpan(customOrdered);
+			customOrdered.Add(move);
 		}
+
+		moves = CollectionsMarshal.AsSpan(customOrdered);
 
 		Span<Move> currLine = stackalloc Move[MAX_LINE_SIZE];
 		currLine.Fill(Move.NullMove);
@@ -92,13 +83,15 @@ class BasicSearch
 		
 		Move bestMove = moves[0];
 
+		bool foundPV = false;
+		bool madeQuietMove = false;
+		byte numActionMovesSeen = 0;
+
 		for (int i = 0; i < moves.Length; i++)
-		{
+		{			
 			Move move = moves[i];
 
-			#if DEBUG
-			if (move.Equals(new Move("f6g5", board))) DebugFlags.AnalyzeMove = true;
-			#endif
+			currLine.Fill(Move.NullMove);
 
 			if (KillSearch) break;
 
@@ -106,9 +99,37 @@ class BasicSearch
 
 			board.MakeMove(move);
 
-			byte extension = (byte) (MovePlayedWasInterestingMove(move) ? 1 : 0);
+			bool moveWasACheck = board.IsInCheck();
+			bool isQuietMove = !(move.IsCapture || move.IsPromotion || moveWasACheck);
 
-			int score = -NegaMax((ushort) (depth-1+extension), Constants.MinEval, Constants.MaxEval, 1, extension, ref currLine, true, tt);
+			if (!isQuietMove) numActionMovesSeen++;
+			else if (numActionMovesSeen > 5)
+			{
+				board.UndoMove(move);
+				continue;
+			}
+
+			if (!madeQuietMove && isQuietMove) madeQuietMove = true;
+
+			byte extension = 0; // (byte) (MovePlayedWasInterestingMove(move) ? 1 : 0);
+
+			int score;
+			
+			if (foundPV && !inCheck && depth >= 3) // NOTE: extension == 0 is currently a placeholder for threat detection
+			{
+				score = -NegaMax((ushort) Math.Min(PVSDepth, depth-3), -Constants.MinEval-1, -Constants.MinEval, 1, ExtensionCap, ref currLine, false, tt);
+			
+				currLine.Fill(Move.NullMove);
+
+				if ((score > Constants.MinEval) && (score < Constants.MaxEval))
+				{
+					score = -NegaMax((ushort) (depth-1+extension), -Constants.MaxEval, -Constants.MinEval, 1, extension, ref currLine, i >= 8, tt);
+				}
+			}
+			else // Normal AlphaBeta NegaMax
+			{
+				score = -NegaMax((ushort) (depth-1+extension), -Constants.MaxEval, -Constants.MinEval, 1, extension, ref currLine, i >= 8, tt);
+			}
 
 			board.UndoMove(move);
 
@@ -119,23 +140,14 @@ class BasicSearch
 
 				currLine[0] = move;
 				BestLine = currLine.ToArray();
-			}
 
-			#if DEBUG
-			if (move.Equals(new Move("f6g5", board)))
-			{
-				Console.WriteLine(score);
-				string lineString = string.Join(' ', BestLine.Select(MoveUtils.GetUCI));
-				Console.WriteLine(lineString);
-				DebugFlags.AnalyzeMove = false;
+				foundPV = true;
 			}
-			#endif
 		}
 		
 		SearchEnded = true;
 
 		BestLine ??= Array.Empty<Move>();
-		
 
 		BestLine = BestLine.TakeWhile((move) => move != Move.NullMove);
 		BestMove = bestMove;
@@ -156,10 +168,13 @@ class BasicSearch
 		return bestMove;
 	}
 
-	int NegaMaxQuiesce(int alpha, int beta, ushort depthFromRoot)
+	int NegaMaxQuiesce(int alpha, int beta, ushort depthFromRoot, int maxDepth = Constants.MaxEval)
 	{
+		if (maxDepth == 0) return Evaluator.EvalPositionWithPerspective(board);
+
 		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
 		
+		// if commented out, reduces runtime (recongized depth of 9 search -(200)ms), check if this leads to bad play
 		if (board.IsDraw()) return Constants.DrawValue;
 		if (board.IsInCheckmate()) return Evaluator.MateIn(depthFromRoot);
 
@@ -175,15 +190,17 @@ class BasicSearch
 
 		GetOrderedLegalMoves(ref moves, depthFromRoot, capturesOnly: true);
 
-		foreach (Move move in moves)
+		for (int i = 0; i < moves.Length; i++)
 		{
+			Move move = moves[i];
+
 			if (KillSearch) return WorstEvalForBot;
 
 			NodesSearched++;
 
 			board.MakeMove(move);
 
-			eval = -NegaMaxQuiesce(-beta, -alpha, (ushort) (depthFromRoot+1));
+			eval = -NegaMaxQuiesce(-beta, -alpha, (ushort) (depthFromRoot+1), maxDepth-1);
 
 			board.UndoMove(move);
 
@@ -198,7 +215,7 @@ class BasicSearch
 		return alpha;
 	}
 
-	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder, bool nullMovePruningEnabled, CombinationTTable tt)
+	public int NegaMax(ushort depth, int alpha, int beta, ushort depthFromRoot, byte numExtensions, ref Span<Move> currLineBuilder, bool nullMovePruningEnabled, in CombinationTTable tt)
 	{
 		if (depthFromRoot > MaxDepthSearched) MaxDepthSearched = depthFromRoot;
 
@@ -224,21 +241,22 @@ class BasicSearch
 		bool inCheck = board.IsInCheck();
 		int eval;
 
-		// Null move pruning
-		if (!inCheck && (depth >= 4) && nullMovePruningEnabled)
-		{
-			board.MakeMove(Move.NullMove);			
-			Span<Move> throwaway = stackalloc Move[MAX_LINE_SIZE];
-			
-			eval = -NegaMax((ushort) (depth-4), -beta, -beta+1, (ushort) (depthFromRoot+1), ExtensionCap, ref throwaway, false, tt);
+		Span<Move> throwaway = stackalloc Move[MAX_LINE_SIZE];
 
-			board.UndoMove(Move.NullMove);
+		// Null move pruning -- removed for now due to occasional blunders
+		// if (!inCheck && (depth >= NULL_MOVE_PRUNE_DEPTH) && nullMovePruningEnabled)
+		// {
+		// 	board.MakeMove(Move.NullMove);			
 			
-			if ((eval >= beta-NullMovePruneThreshold) && !(Evaluator.IsMateScore(eval) && Evaluator.ExtractMateInNMoves(eval) > 0))
-			{
-				return eval;
-			}
-		}
+		// 	eval = -NegaMax((ushort) (depth-NULL_MOVE_PRUNE_DEPTH), -beta, -beta+1, (ushort) (depthFromRoot+1), ExtensionCap, ref throwaway, false, tt);
+
+		// 	board.UndoMove(Move.NullMove);
+			
+		// 	if ((eval >= beta-NullMovePruneThreshold) && !(Evaluator.IsMateScore(eval) && Evaluator.ExtractMateInNMoves(eval) > 0))
+		// 	{
+		// 		return eval;
+		// 	}
+		// }
 
 		Span<Move> moves = stackalloc Move[MOVE_STACKALLOC_AMT];
 
@@ -263,9 +281,19 @@ class BasicSearch
 		byte evalBound = TranspositionTable.UpperBound;
 		Move bestMove = moves[0];
 
-		for (int i = 0; i < moves.Length; i++)
+		bool canSacrificePrune = true;
+		byte numActionMovesSeen = 0;
+
+		int i = -1;
+
+		ref var move = ref MemoryMarshal.GetReference(moves);
+		ref var end = ref Unsafe.Add(ref move, moves.Length);
+
+		while (Unsafe.IsAddressLessThan(ref move, ref end))
 		{
-			Move move = moves[i];
+			i++;
+			currLine.Fill(Move.NullMove);
+			canSacrificePrune = !canSacrificePrune;
 
 			if (KillSearch)
 			{
@@ -273,31 +301,50 @@ class BasicSearch
 			}
 
 			NodesSearched++;
-		
-			// futility pruning -- it is depth 2 & below so make sure it doesnt play badly
-			if (!inCheck && !foundPV && depth <= 2 && madeQuietMove && !(move.IsCapture || move.IsPromotion))
-			{
-				board.MakeMove(move);
-
-				bool moveWasACheck = board.IsInCheck();
-
-				board.UndoMove(move);
-
-				if (!moveWasACheck) continue;
-			}
 			
 			board.MakeMove(move);
 
-			if (!madeQuietMove && !(move.IsCapture || move.IsPromotion)) madeQuietMove = true;
+			bool moveWasACheck = board.IsInCheck();
+			bool isQuietMove = !(move.IsCapture || move.IsPromotion || moveWasACheck);
+
+			if (!isQuietMove) numActionMovesSeen++; // try beat depth 10 -> 6549158 nodes
+			else if (numActionMovesSeen > 5)
+			{
+				board.UndoMove(move);
+
+				move = ref Unsafe.Add(ref move, 1);
+				continue;
+			}
+
+			// futility pruning -- it is depth 1
+			if (!inCheck && !foundPV && depth <= FUTUILITY_PRUNE_DEPTH && madeQuietMove && isQuietMove)
+			{
+				board.UndoMove(move);
+				
+				move = ref Unsafe.Add(ref move, 1);
+				continue;
+			}
+
+			// custom pruning method -- sacrificial pruning -- get below 1305771 depth 9 search
+			// if (false && !foundPV && (Math.Abs(Math.Abs(alpha)-Math.Abs(NegaMaxQuiesce(-beta, -alpha, (ushort) (depthFromRoot+1), maxDepth: 1))) > 300) && depth <= 3)
+			// {
+			// 	 // huge game sacrifice without sufficient depth to search it through, just skip
+			// 	board.UndoMove(move);
+			// 	continue;
+			// }
+
+			if (!madeQuietMove && isQuietMove) madeQuietMove = true;
 
 			byte extension = 0; // FOR NOW, EXTENSIONS ARE DISABLED - LEADS TO LESS NODE SEARCHES
 
 			// PVS
 
-			if (foundPV && (extension == 0) && (depth >= 3)) // NOTE: extension == 0 is currently a placeholder for threat detection
+			if (foundPV && !inCheck && (depth >= 3)) // NOTE: extension == 0 is currently a placeholder for threat detection
 			{
 				eval = -NegaMax((ushort) Math.Min(PVSDepth, depth-3), -alpha-1, -alpha, (ushort) (depthFromRoot+1), ExtensionCap, ref currLine, false, tt);
 			
+				currLine.Fill(Move.NullMove);
+
 				if ((eval > alpha) && (eval < beta))
 				{
 					eval = -NegaMax((ushort) (depth-1+extension), -beta, -alpha, (ushort) (depthFromRoot+1), (byte) (numExtensions+extension), ref currLine, i >= 8, tt);
@@ -318,7 +365,9 @@ class BasicSearch
 				{
 					if (depthFromRoot < MoveOrdering.MaxKillerMovePly)
 					{
-						Move[] arr = MoveOrdering.killerMoves[depthFromRoot];
+						ref Move[] arr = ref MoveOrdering.killerMoves[depthFromRoot];
+						
+						
 						arr[1] = arr[0];
 						arr[0] = move;
 					}
@@ -343,6 +392,8 @@ class BasicSearch
 					
 				}
 			}
+
+			move = ref Unsafe.Add(ref move, 1);
 		}
 
 		if (depthFromRoot < MAX_LINE_SIZE) currLineBuilder[depthFromRoot] = bestMove;

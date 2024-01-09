@@ -19,6 +19,7 @@ A work-in-progress UCI-compatible chess engine written in C# utilizing a search-
 - Also add king vs pawn vs king eval
 - Add pruning to not search big sacrifices when a depth of 5+ (or some other arbitrary number) after the sac will not be searched
 - Allow transposition table to have rotated boards
+- Have bias against moving king in opening
 
 ## Changelog -- Discontinued
 - Started late (started 9/1/23, not all changes from 9/1/23 are listed)

@@ -44,7 +44,7 @@ class IterDeepSearch
 
 				searches.Add(search);
 
-				Move bestMove = search.Execute(i, sharedTT);
+				Move bestMove = search.Execute(i, ref sharedTT);
 
 				while (bestMoves.Contains(bestMove)) bestMoves.Remove(bestMove);
 				

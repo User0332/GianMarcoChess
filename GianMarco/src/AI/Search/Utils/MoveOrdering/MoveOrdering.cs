@@ -90,7 +90,7 @@ static class MoveOrdering
 	{
 		Span<short> scores = stackalloc short[moves.Length];
 
-		for (byte i=0; i<moves.Length; i++) scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot);
+		for (byte i = 0; i < moves.Length; i++) scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot);
 
 		QSort(in moves, in scores, 0, moves.Length-1);
 	}
