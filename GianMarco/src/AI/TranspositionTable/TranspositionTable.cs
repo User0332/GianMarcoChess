@@ -3,7 +3,7 @@ using ChessChallenge.API;
 
 namespace GianMarco.TTable;
 
-public readonly ref struct TranspositionTable
+public sealed class TranspositionTable
 {
 	public const int LookupFailed = int.MinValue;
 	public const byte Exact = 0;
@@ -22,7 +22,7 @@ public readonly ref struct TranspositionTable
 		Entries = new Entry[size];
 	}
 
-	public readonly void Clear()
+	public void Clear()
 	{
 		for (int i = 0; i < Entries.Length; i++)
 			Entries[i] = new Entry();
@@ -32,8 +32,8 @@ public readonly ref struct TranspositionTable
 		get => board.ZobristKey % size;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly int LookupEval(int depth, int alpha, int beta)
+
+	public int LookupEval(int depth, int alpha, int beta)
 	{
 		if (!Enabled) return LookupFailed;
 
@@ -51,8 +51,8 @@ public readonly ref struct TranspositionTable
 		return LookupFailed;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly int LookupEvalWithIndex(int depth, int alpha, int beta)
+
+	public int LookupEvalWithIndex(int depth, int alpha, int beta)
 	{
 		if (!Enabled) return LookupFailed;
 
@@ -70,12 +70,12 @@ public readonly ref struct TranspositionTable
 		return LookupFailed;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly void StoreEvaluation(int depth, int eval, int evalType, Move move)
+
+	public void StoreEvaluation(int depth, int eval, int evalType)
 	{
 		if (!Enabled) return;
 
-		Entries[Index] = new Entry(board.ZobristKey, eval, move, depth, evalType);
+		Entries[Index] = new Entry(board.ZobristKey, eval, depth, evalType);
 	}
 }
 
@@ -83,15 +83,13 @@ public readonly struct Entry
 {
 	public readonly ulong Key;
 	public readonly int Value;
-	public readonly Move Move;
 	public readonly int Depth;
 	public readonly int NodeType;
 
-	public Entry(ulong key, int value, Move move, int depth, int nodeType)
+	public Entry(ulong key, int value, int depth, int nodeType)
 	{
 		Key = key;
 		Value = value;
-		Move = move;
 		Depth = depth;
 		NodeType = nodeType;
 	}

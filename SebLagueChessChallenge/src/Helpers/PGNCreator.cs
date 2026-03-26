@@ -8,13 +8,13 @@ namespace ChessChallenge.Chess
     public static class PGNCreator
     {
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static string CreatePGN(Move[] moves)
         {
             return CreatePGN(moves, GameResult.InProgress, FenUtility.StartPositionFEN);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static string CreatePGN(Board board, GameResult result, string whiteName = "", string blackName = "")
         {
             return CreatePGN(board.AllGameMoves.ToArray(), result, board.GameStartFen, whiteName, blackName);

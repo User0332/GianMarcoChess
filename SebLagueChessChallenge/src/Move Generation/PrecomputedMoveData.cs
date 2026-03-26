@@ -62,13 +62,13 @@
         public static int[,] kingDistance;
         public static int[] CentreManhattanDistance;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static int NumRookMovesToReachSquare(int startSquare, int targetSquare)
         {
             return OrthogonalDistance[startSquare, targetSquare];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static int NumKingMovesToReachSquare(int startSquare, int targetSquare)
         {
             return kingDistance[startSquare, targetSquare];

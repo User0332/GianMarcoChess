@@ -33,7 +33,7 @@ namespace ChessChallenge.API
         public Piece this[int index] => board.GetPiece(new Square(list[index]));
 
         // Allow piece list to be iterated over with 'foreach'
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 	    public IEnumerator<Piece> GetEnumerator()
         {
             for (int i = 0; i < Count; i++)
@@ -41,7 +41,7 @@ namespace ChessChallenge.API
                 yield return GetPiece(i);
             }
         }
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();

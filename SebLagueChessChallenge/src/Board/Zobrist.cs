@@ -81,7 +81,7 @@ namespace ChessChallenge.Chess
             return zobristKey;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         static ulong RandomUnsigned64BitNumber(System.Random rng)
         {
             byte[] buffer = new byte[8];

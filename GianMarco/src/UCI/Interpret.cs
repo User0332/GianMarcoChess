@@ -12,9 +12,9 @@ public static class PreBuiltInterpreter
 	static void LoadPosition(string[] cmdArgs)
 	{
 		if (cmdArgs[1] == "startpos")
-		{			
+		{
 			currBoard = Board.CreateBoardFromFEN(ChessChallenge.Chess.FenUtility.StartPositionFEN);
-			
+
 			if (cmdArgs.Length > 2 && cmdArgs[2] == "moves")
 			{
 				foreach (string move in cmdArgs.Skip(3))
@@ -24,7 +24,7 @@ public static class PreBuiltInterpreter
 					);
 				}
 			}
-			
+
 			return;
 		}
 
@@ -34,7 +34,7 @@ public static class PreBuiltInterpreter
 			string fenString = string.Join(' ', fenStringArr);
 
 			currBoard = Board.CreateBoardFromFEN(fenString);
-			
+
 			if (cmdArgs.Length > fenStringArr.Count()+2)
 			{
 				foreach (string move in cmdArgs.Skip(fenStringArr.Count()+3))
@@ -76,11 +76,11 @@ public static class PreBuiltInterpreter
 		if ((btimeIdx = Array.IndexOf(cmdArgs, "btime")) != -1)
 		{
 			string btimeString = cmdArgs[btimeIdx+1];
-			
+
 			bTimeMs = ulong.Parse(btimeString);
 		}
 
-		int searchTimeMs = (int) (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/20;
+		int searchTimeMs = (int) (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/15;
 
 
 		int moveTimeIdx = -1;
@@ -111,7 +111,7 @@ public static class PreBuiltInterpreter
 	public static void RunAndDelegateCommands()
 	{
 		while (true)
-		{	
+		{
 			string? cmd = Console.ReadLine();
 
 			if (cmd is null) return;

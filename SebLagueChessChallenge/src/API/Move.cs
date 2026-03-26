@@ -64,7 +64,7 @@ namespace ChessChallenge.API
 		/// Tests if two moves are the same.
 		/// This is true if they move to/from the same square, and move/capture/promote the same piece type
 		/// </summary>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
 		public bool Equals(Move other)
 		{
 			return RawValue == other.RawValue && pieceTypeData == other.pieceTypeData;

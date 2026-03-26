@@ -7,7 +7,7 @@ namespace GianMarco.Evaluation.King;
 public static class KingSafety
 {
 	static readonly int[] WhiteKingNormalScores = {
-		25, 35, 25, 15, 15, 25, 35, 25,
+		25, 40, 25, 15, 15, 25, 40, 25,
 		20, 20, 20, 10, 10, 20, 20, 20,
 		10, 10, 10, 0 , 0 , 10, 10, 10,
 		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
@@ -17,15 +17,15 @@ public static class KingSafety
 		-40,-40,-40,-40,-40,-40,-40,-40,
 	};
 
-	static readonly int[] BlackKingNormalScores = {		
-		-40,-40,-40,-40,-40,-40,-40,-40,	
+	static readonly int[] BlackKingNormalScores = {
+		-40,-40,-40,-40,-40,-40,-40,-40,
 		-20,-20,-20,-20,-20,-20,-20,-20,
-		-10,-10,-10,-10,-10,-10,-10,-10,		
+		-10,-10,-10,-10,-10,-10,-10,-10,
 		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,		
+		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
 		10, 10, 10, 0 , 0 , 10, 10, 10,
 		20, 20, 20, 10, 10, 20, 20, 20,
-		25, 35, 25, 15, 15, 25, 35, 25,
+		25, 40, 25, 15, 15, 25, 40, 25,
 	};
 
 	static readonly int[] KingEndgameScores = {
@@ -43,7 +43,7 @@ public static class KingSafety
 
 	const int DangerousPieceProximityWeight = 30; // king safety is important!!!
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	static int CalculateSquareDistance(int squareOne, int squareTwo)
 	{
 		(int rankOne, int fileOne) = (squareOne >> 3, squareOne & 0b000111);
@@ -76,7 +76,7 @@ public static class KingSafety
 	/// <summary>
 	///  In the endgame, we want kings farther away from the corners
 	/// </summary>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	static int KingPositionSafetyEndgame(int whiteKingSquare, int blackKingSquare, int materialDifference)
 	{
 		int score = KingEndgameScores[whiteKingSquare]-KingEndgameScores[blackKingSquare];
@@ -85,7 +85,7 @@ public static class KingSafety
 
 		if (materialDifference > 500) // if white is up material, their king should be closer to the black king
 		{ score-=kingDistance; }
-		
+
 		if (materialDifference < 500) // if black is up material, their king should be closer to the white king
 		{ score+=kingDistance; }
 
@@ -95,13 +95,13 @@ public static class KingSafety
 	/// <summary>
 	///  In the opening and middlegame, we want kings farther away from the center and in the corners of their own side
 	/// </summary>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	static int KingPositionSafetyNormal(int whiteKingSquare, int blackKingSquare)
 	{
 		return WhiteKingNormalScores[whiteKingSquare]-BlackKingNormalScores[blackKingSquare];
 	}
-	
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
+
 	public static int Evaluate(Board board, int materialDifference)
 	{
 		int whiteKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex];

@@ -47,7 +47,7 @@ namespace ChessChallenge.Chess
         // Otherwise it will have 1s everywhere.
         ulong moveTypeMask;
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public System.Span<Move> GenerateMoves(Board board, bool includeQuietMoves = true)
         {
             System.Span<Move> moves = new Move[MaxMoves];
@@ -77,13 +77,13 @@ namespace ChessChallenge.Chess
         }
 
         // Note, this will only return correct value after GenerateMoves() has been called in the current position
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public bool InCheck()
         {
             return inCheck;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         void Init()
         {
             // Reset state
@@ -385,7 +385,7 @@ namespace ChessChallenge.Chess
             }
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         bool IsPinned(int square)
         {
             return ((pinRays >> square) & 1) != 0;

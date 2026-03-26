@@ -17,20 +17,20 @@ namespace ChessChallenge.Chess
         public static readonly ulong[][] RookAttacks;
         public static readonly ulong[][] BishopAttacks;
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static ulong GetSliderAttacks(int square, ulong blockers, bool ortho)
         {
             return ortho ? GetRookAttacks(square, blockers) : GetBishopAttacks(square, blockers);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static ulong GetRookAttacks(int square, ulong blockers)
         {
             ulong key = ((blockers & RookMask[square]) * RookMagics[square]) >> RookShifts[square];
             return RookAttacks[square][key];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static ulong GetBishopAttacks(int square, ulong blockers)
         {
             ulong key = ((blockers & BishopMask[square]) * BishopMagics[square]) >> BishopShifts[square];

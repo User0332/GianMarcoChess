@@ -20,8 +20,8 @@ public readonly ref struct RefStructTTable
 		size = entrySpan.Length;
 		Entries = entrySpan;
 	}
-	
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
+
 	public readonly void Clear()
 	{
 		for (int i = 0; i < Entries.Length; i++)
@@ -32,7 +32,7 @@ public readonly ref struct RefStructTTable
 		get =>  (int) (board.ZobristKey % (ulong) size);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public readonly int LookupEval(int depth, int alpha, int beta)
 	{
 		if (!Enabled) return LookupFailed;
@@ -51,11 +51,11 @@ public readonly ref struct RefStructTTable
 		return LookupFailed;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly void StoreEvaluation(int depth, int eval, int evalType, Move move)
+
+	public readonly void StoreEvaluation(int depth, int eval, int evalType)
 	{
 		if (!Enabled) return;
 
-		Entries[Index] = new Entry(board.ZobristKey, eval, move, depth, evalType);
+		Entries[Index] = new Entry(board.ZobristKey, eval, depth, evalType);
 	}
 }

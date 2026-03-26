@@ -11,7 +11,7 @@ namespace ChessChallenge.Chess
         public const string StartPositionFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
         // Load position from fen string
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static PositionInfo PositionFromFen(string fen)
         {
 

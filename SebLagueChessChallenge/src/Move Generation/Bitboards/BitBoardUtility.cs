@@ -7,7 +7,7 @@
     {
 
         // Get index of least significant set bit in given 64bit value. Also clears the bit to zero.
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int PopLSB(ref ulong b)
         {
             int i = BitOperations.TrailingZeroCount(b);
@@ -15,43 +15,43 @@
             return i;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int PopCount(ulong x)
         {
             return BitOperations.PopCount(x);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static void SetSquare(ref ulong bitboard, int squareIndex)
         {
             bitboard |= 1ul << squareIndex;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static void ClearSquare(ref ulong bitboard, int squareIndex)
         {
             bitboard &= ~(1ul << squareIndex);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static void ToggleSquare(ref ulong bitboard, int squareIndex)
         {
             bitboard ^= 1ul << squareIndex;
         }
 
-       	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+       	
 	    public static void ToggleSquares(ref ulong bitboard, int squareA, int squareB)
         {
             bitboard ^= (1ul << squareA | 1ul << squareB);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static bool ContainsSquare(ulong bitboard, int square)
         {
             return ((bitboard >> square) & 1) != 0;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static ulong PawnAttacks(ulong pawnBitboard, bool isWhite)
         {
             // Pawn attacks are calculated like so: (example given with white to move)
@@ -72,7 +72,7 @@
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static ulong Shift(ulong bitboard, int numSquaresToShift)
         {
             if (numSquaresToShift > 0)
@@ -86,14 +86,14 @@
 
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static ulong ProtectedPawns(ulong pawns, bool isWhite)
         {
             ulong attacks = PawnAttacks(pawns, isWhite);
             return attacks & pawns;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static ulong LockedPawns(ulong whitePawns, ulong blackPawns)
         {
             ulong pushUp = whitePawns << 8;

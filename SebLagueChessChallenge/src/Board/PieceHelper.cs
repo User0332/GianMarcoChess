@@ -46,35 +46,35 @@ namespace ChessChallenge.Chess
         const int typeMask = 0b0111;
         const int colourMask = 0b1000;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static int MakePiece(int pieceType, int pieceColour) => pieceType | pieceColour;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static int MakePiece(int pieceType, bool pieceIsWhite) => MakePiece(pieceType, pieceIsWhite ? White : Black);
 
         // Returns true if given piece matches the given colour. If piece is of type 'none', result will always be false.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
 		public static bool IsColour(int piece, int colour) => (piece & colourMask) == colour && piece != 0;
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool IsWhite(int piece) => IsColour(piece, White);
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int PieceColour(int piece) => piece & colourMask;
 		
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int PieceType(int piece) => piece & typeMask;
 
         // Rook or Queen
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool IsOrthogonalSlider(int piece) => PieceType(piece) is Queen or Rook;
 
         // Bishop or Queen
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool IsDiagonalSlider(int piece) => PieceType(piece) is Queen or Bishop;
 
         // Bishop, Rook, or Queen
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool IsSlidingPiece(int piece) => PieceType(piece) is Queen or Bishop or Rook;
 
     }

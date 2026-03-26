@@ -1,8 +1,16 @@
-﻿namespace GianMarco;
+﻿using BenchmarkDotNet.Running;
+
+namespace GianMarco;
 class Program
 {
 	static int Main(string[] args)
 	{
+		if (args.Length == 1 && args[0] == "benchmark")
+		{
+			BenchmarkRunner.Run<EvaluationBenchmarks>();
+			return 0;
+		}
+
 		if (args.Length == 3) // for genetic algorithm
 		{
 			Search.Utils.MoveOrdering.CaptureBonus = int.Parse(args[0]);

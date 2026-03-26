@@ -12,29 +12,26 @@ namespace GianMarco.Evaluation;
 
 public static class Constants
 {
-	public const int MaxEval = 2147483647;
-	public const int MinEval = -2147483647;
+	public const int MaxEval = 100000000;
+	public const int MinEval = -100000000;
 	public const int DrawValue = 0;
-
-	public const int NegativeTestValue = -1234567890;
-	public const int TestValue = 1234567890;
 }
 
 public static class Evaluator
 {
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public static bool IsMateScore(int score)
 	{
 		return ((score < Constants.MinEval+500) && (score != Constants.MinEval)) || ((score > Constants.MaxEval-500) && (score != Constants.MaxEval));
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public static int MateIn(int ply)
 	{
 		return Constants.MinEval+ply;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public static int ExtractMateInNMoves(int score)
 	{
 		if (score < Constants.MinEval+500)
@@ -50,20 +47,20 @@ public static class Evaluator
 		score+=(
 			KingSafety.Evaluate(board, score) +
 			PawnEval.Evaluate(board) +
-			OutpostEval.Evaluate(board) +
+			// OutpostEval.Evaluate(board) +
 			PiecePositionalEval.Evaluate(board)
 		);
 
 		// Endgame Only Evals (to help with checkmates and puzzles)
-		if (GamePhaseUtils.IsEndgame(board))
-		{
-			score+=(
-				BishopMate.Evaluate(board) +
-				BishopAndKnightMate.Evaluate(board) +
-				ThreeKnightsMate.Evaluate(board) +
-				PawnEndgame.Evaluate(board)
-			);
-		}
+		// if (GamePhaseUtils.IsEndgame(board))
+		// {
+		// 	score+=(
+		// 		BishopMate.Evaluate(board) +
+		// 		BishopAndKnightMate.Evaluate(board) +
+		// 		ThreeKnightsMate.Evaluate(board) +
+		// 		PawnEndgame.Evaluate(board)
+		// 	);
+		// }
 
 		return score;
 	}

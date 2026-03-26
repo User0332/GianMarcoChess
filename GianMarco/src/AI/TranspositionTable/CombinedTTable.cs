@@ -11,7 +11,7 @@ public readonly ref struct CombinationTTable
 	readonly Board board;
 	readonly ulong size;
 
-	public CombinationTTable(Board board, Span<Entry> entrySpan, uint heapSizeMB) 
+	public CombinationTTable(Board board, Span<Entry> entrySpan, uint heapSizeMB)
 	{
 		stackTTable = new(board, entrySpan);
 		heapTTable = new(
@@ -28,7 +28,7 @@ public readonly ref struct CombinationTTable
 		get => (int) (board.ZobristKey % size);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public readonly int LookupEval(int depth, int alpha, int beta)
 	{
 		if (Index < stackTTable.size)
@@ -37,19 +37,19 @@ public readonly ref struct CombinationTTable
 		return heapTTable.LookupEval(depth, alpha, beta);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly void StoreEvaluation(int depth, int eval, int evalType, Move move)
+
+	public readonly void StoreEvaluation(int depth, int eval, int evalType)
 	{
 		if (Index < stackTTable.size)
 		{
-			stackTTable.StoreEvaluation(depth, eval, evalType, move);
+			stackTTable.StoreEvaluation(depth, eval, evalType);
 			return;
 		}
 
-		heapTTable.StoreEvaluation(depth, eval, evalType, move);
+		heapTTable.StoreEvaluation(depth, eval, evalType);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public readonly void Clear()
 	{
 		stackTTable.Clear();

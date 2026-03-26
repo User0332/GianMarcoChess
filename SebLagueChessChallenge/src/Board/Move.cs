@@ -77,7 +77,7 @@ namespace ChessChallenge.Chess
 
         public static Move NullMove => new Move(0);
 		
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool SameMove(Move a, Move b) => a.moveValue == b.moveValue;
 
 

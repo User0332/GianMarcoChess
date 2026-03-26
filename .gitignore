@@ -4,3 +4,4 @@ lichess-bot/config.yml
 venv/
 __pycache__/
 *.log
+BenchmarkDotNet.Artifacts/

@@ -17,7 +17,7 @@ namespace ChessChallenge.Chess
             startIndices = new int[size];
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public void Init(Board board)
         {
             ulong[] initialHashes = board.RepetitionPositionHistory.Reverse().ToArray();
@@ -31,7 +31,7 @@ namespace ChessChallenge.Chess
             startIndices[count] = 0;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public void Push(ulong hash, bool reset)
         {
             // Check bounds just in case
@@ -43,13 +43,13 @@ namespace ChessChallenge.Chess
             }
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public void TryPop()
         {
             count = Math.Max(0, count - 1);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public readonly bool Contains(ulong h)
         {
             int s = startIndices[count];

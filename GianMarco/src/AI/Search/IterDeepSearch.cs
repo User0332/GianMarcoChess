@@ -19,11 +19,11 @@ class IterDeepSearch
 
 	private readonly List<BasicSearch> searches = new(20);
 
-	private readonly List<Move> bestMoves = new(20);
+	private Move[] lastPV = [];
 	public IterDeepSearch(Board board, uint maxDepth)
 	{
 		if (maxDepth < StartDepth) maxDepth = StartDepth;
-		
+
 		this.board = board;
 		this.maxDepth = maxDepth;
 	}
@@ -31,24 +31,23 @@ class IterDeepSearch
 	public void Search()
 	{
 		new Thread(() => {
-			Span<Entry> ttSpan = stackalloc Entry[(int) Math.Floor((double) (TTStackSizeMB*1000000)/Marshal.SizeOf<Entry>())];
-			
-			CombinationTTable sharedTT = new(board, ttSpan, TTHeapSizeMB);
+			// Span<Entry> ttSpan = stackalloc Entry[(int) Math.Floor((double) (TTStackSizeMB*1000000)/Marshal.SizeOf<Entry>())];
+
+			// CombinationTTable sharedTT = new(board, ttSpan, TTHeapSizeMB);
+
+			TranspositionTable sharedTT = new(board, TTHeapSizeMB);
 
 			for (int i = StartDepth; i <= maxDepth; i++)
 			{
 				var search = new BasicSearch(
-					board,
-					[..bestMoves] // copy the list
+					board
 				);
 
 				searches.Add(search);
 
-				Move bestMove = search.Execute(i, ref sharedTT);
+				Move bestMove = search.Execute(i, sharedTT, lastPV);
 
-				while (bestMoves.Contains(bestMove)) bestMoves.Remove(bestMove);
-				
-				bestMoves.Insert(0, bestMove);
+				lastPV = [..search.BestLine]; // copy best line
 
 				if (endSearchFlag) return;
 			}

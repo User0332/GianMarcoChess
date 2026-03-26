@@ -24,14 +24,14 @@ namespace ChessChallenge.Chess
             this.zobristKey = zobristKey;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public bool HasKingsideCastleRight(bool white)
         {
             int mask = white ? 1 : 4;
             return (castlingRights & mask) != 0;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public bool HasQueensideCastleRight(bool white)
         {
             int mask = white ? 2 : 8;

@@ -31,68 +31,68 @@ namespace ChessChallenge.Chess
 
 
         // Rank (0 to 7) of square 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int RankIndex(int squareIndex)
         {
             return squareIndex >> 3;
         }
 
         // File (0 to 7) of square 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int FileIndex(int squareIndex)
         {
             return squareIndex & 0b000111;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int IndexFromCoord(int fileIndex, int rankIndex)
         {
             return rankIndex * 8 + fileIndex;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int IndexFromCoord(Coord coord)
         {
             return IndexFromCoord(coord.fileIndex, coord.rankIndex);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static Coord CoordFromIndex(int squareIndex)
         {
             return new Coord(FileIndex(squareIndex), RankIndex(squareIndex));
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool LightSquare(int fileIndex, int rankIndex)
         {
             return (fileIndex + rankIndex) % 2 != 0;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool LightSquare(int squareIndex)
         {
             return LightSquare(FileIndex(squareIndex), RankIndex(squareIndex));
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static string SquareNameFromCoordinate(int fileIndex, int rankIndex)
         {
             return fileNames[fileIndex] + "" + (rankIndex + 1);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static string SquareNameFromIndex(int squareIndex)
         {
             return SquareNameFromCoordinate(CoordFromIndex(squareIndex));
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static string SquareNameFromCoordinate(Coord coord)
         {
             return SquareNameFromCoordinate(coord.fileIndex, coord.rankIndex);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static int SquareIndexFromName(string name)
         {
             char fileName = name[0];
@@ -102,7 +102,7 @@ namespace ChessChallenge.Chess
             return IndexFromCoord(fileIndex, rankIndex);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public static bool IsValidCoordinate(int x, int y) => x >= 0 && x < 8 && y >= 0 && y < 8;
 
     }

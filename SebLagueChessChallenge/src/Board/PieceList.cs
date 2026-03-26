@@ -26,7 +26,7 @@ namespace ChessChallenge.Chess
             }
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public void AddPieceAtSquare(int square)
         {
             occupiedSquares[numPieces] = square;
@@ -34,7 +34,7 @@ namespace ChessChallenge.Chess
             numPieces++;
         }
 		
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public void RemovePieceAtSquare(int square)
         {
             int pieceIndex = map[square]; // get the index of this element in the occupiedSquares array
@@ -43,7 +43,7 @@ namespace ChessChallenge.Chess
             numPieces--;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public void MovePiece(int startSquare, int targetSquare)
         {
             int pieceIndex = map[startSquare]; // get the index of this element in the occupiedSquares array

@@ -10,37 +10,36 @@ public static class PawnEval
 	const int StackedPawnPenalty = 20;
 	const int IsolatedPawnPenalty = 25;
 
-	static readonly int[] WhitePawnRankBonus = {
-		0, 0, 0, 0, 0, 0, 0, 0, // first rank only needed to keep indexes correct, white pawns cannot be here
-		0, 0, 0, 0, 0, 0, 0, 0,
-		5, 5, 5, 5, 5, 5, 5, 5,
-		5, 5, 5, 5, 5, 5, 5, 5,
-		10, 10, 10, 10, 10, 10, 10, 10,
-		10, 10, 10, 10, 10, 10, 10, 10,
-		20, 20, 20, 20, 20, 20, 20, 20,
-		// 30, 30, 30, 30, 30, 30, 30, 30, // last rank not needed, white pawns promote here
+	static readonly int[] WhitePawnPositionBonus = {
+		0,  0,  0,  0,  0,  0,  0,  0,  // rank 1 (white cannot be here)
+		0,  0,  0,  0,  0,  0,  0,  0,  // rank 2 (starting position)
+		1,  3,  5, 10, 10,  5,  3,  1,  // rank 3 (diffusing from center)
+		3,  8, 12, 15, 15, 12,  8,  3,  // rank 4
+		5, 12, 18, 25, 25, 18, 12,  5,  // rank 5
+		10, 20, 28, 35, 35, 28, 20, 10,  // rank 6
+		15, 25, 35, 40, 40, 35, 25, 15,  // rank 7 (promotion zone)
+		50, 50, 50, 50, 50, 50, 50, 50,  // rank 8 (promotion)
 	};
 
-	static readonly int[] BlackPawnRankBonus = {
-		// 30, 30, 30, 30, 30, 30, 30, 30, // first rank not needed, black pawns promote here
-		20, 20, 20, 20, 20, 20, 20, 20,
-		10, 10, 10, 10, 10, 10, 10, 10,
-		10, 10, 10, 10, 10, 10, 10, 10,
-		5, 5, 5, 5, 5, 5, 5, 5,
-		5, 5, 5, 5, 5, 5, 5, 5,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0, // last rank only needed to keep indexes correct, black pawns cannot be here
+	static readonly int[] BlackPawnPositionBonus = {
+		50, 50, 50, 50, 50, 50, 50, 50,  // rank 1 (promotion)
+		15, 25, 35, 40, 40, 35, 25, 15,  // rank 2 (promotion zone)
+		10, 20, 28, 35, 35, 28, 20, 10,  // rank 3
+		5, 12, 18, 25, 25, 18, 12,  5,   // rank 4
+		3,  8, 12, 15, 15, 12,  8,  3,   // rank 5
+		1,  3,  5, 10, 10,  5,  3,  1,   // rank 6 (diffusing from center)
+		0,  0,  0,  0,  0,  0,  0,  0,   // rank 7 (starting position)
+		0,  0,  0,  0,  0,  0,  0,  0,   // rank 8 (black cannot be here)
 	};
 
 	public const ulong FileBitBoard = 0x0101010101010101;
 
-	[MethodImpl(MethodImplOptions.AggressiveOptimization)]
 	static ulong GetFrontViewMask(Square square, bool white)
 	{
 		ulong fileMask = GetPawnSurroundingMask(square);
 
 		int shifter;
-		
+
 		if (white)
 			shifter = (square.Rank+1) << 3; // << 3 same as * 8
 		else
@@ -51,7 +50,6 @@ public static class PawnEval
 		return frontMask & fileMask;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static ulong GetPawnSurroundingMask(Square square)
 	{
 		return
@@ -60,7 +58,7 @@ public static class PawnEval
 			(FileBitBoard << Math.Min(7, square.File+1));
 	}
 
-	static int EvaluatePassedPawnsForColor(PieceList pawns, ulong enemyPawns, bool white)
+	public static int EvaluatePassedPawnsForColor(PieceList pawns, ulong enemyPawns, bool white)
 	{
 		int score = 0;
 
@@ -75,14 +73,13 @@ public static class PawnEval
 		return score;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static int EvaluatePassedPawns(PieceList whitePawns, PieceList blackPawns, ulong whitePawnBitboard, ulong blackPawnBitboard)
 	{
 		return EvaluatePassedPawnsForColor(whitePawns, blackPawnBitboard, true)-EvaluatePassedPawnsForColor(blackPawns, whitePawnBitboard, false);
 	}
 
 	// TODO: only use bitboards to calculate this
-	static int EvaluateStackedPawnsForColor(PieceList pawns, ulong friendlyPawnBitboard)
+	public static int EvaluateStackedPawnsForColor(PieceList pawns, ulong friendlyPawnBitboard)
 	{
 		int penalty = 0;
 
@@ -91,7 +88,7 @@ public static class PawnEval
 			ulong fileMask = FileBitBoard << pawn.Square.File;
 
 			if (BitOperations.PopCount(friendlyPawnBitboard & fileMask) == 1) continue; // if there are no OTHER friendly pawns in the same file, it is not stacked; continue;
-	
+
 			penalty+=StackedPawnPenalty;
 		}
 
@@ -99,16 +96,15 @@ public static class PawnEval
 	}
 
 	/// <summary>
-	///  
+	///
 	/// </summary>
 	/// <returns>the penalty value of both players combined into a single value (this value must be SUBTRACTED from the final eval)</returns>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static int EvaluateStackedPawnPenalty(PieceList whitePawns, PieceList blackPawns, ulong whitePawnBitboard, ulong blackPawnBitboard)
 	{
 		return EvaluateStackedPawnsForColor(whitePawns, whitePawnBitboard)-EvaluateStackedPawnsForColor(blackPawns, blackPawnBitboard);
 	}
 
-	static int EvaluateIsolatedPawnsForColor(PieceList pawns, ulong friendlyPawnBitboard)
+	public static int EvaluateIsolatedPawnsForColor(PieceList pawns, ulong friendlyPawnBitboard)
 	{
 		int penalty = 0;
 
@@ -120,28 +116,27 @@ public static class PawnEval
 				penalty+=IsolatedPawnPenalty;
 		}
 
-		return penalty;		
+		return penalty;
 	}
 
 	/// <summary>
-	///  
+	///
 	/// </summary>
 	/// <returns>the penalty value of both players combined into a single value (this value must be SUBTRACTED from the final eval)</returns>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static int EvaluateIsolatedPawnPenalty(PieceList whitePawns, PieceList blackPawns, ulong whitePawnBitboard, ulong blackPawnBitboard)
 	{
 		return EvaluateIsolatedPawnsForColor(whitePawns, whitePawnBitboard)-EvaluateIsolatedPawnsForColor(blackPawns, blackPawnBitboard);
 	}
 
-	static int EvaluatePushedPawns(PieceList whitePawns, PieceList blackPawns)
+	public static int EvaluatePushedPawns(PieceList whitePawns, PieceList blackPawns)
 	{
 		int score = 0;
 
 		foreach (var whitePawn in whitePawns)
-			score+=WhitePawnRankBonus[whitePawn.Square.Index];
+			score+=WhitePawnPositionBonus[whitePawn.Square.Index];
 
 		foreach (var blackPawn in blackPawns)
-			score+=BlackPawnRankBonus[blackPawn.Square.Index];
+			score+=BlackPawnPositionBonus[blackPawn.Square.Index];
 
 		return score;
 	}

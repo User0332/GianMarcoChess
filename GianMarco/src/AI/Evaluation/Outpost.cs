@@ -86,19 +86,19 @@ public static class OutpostEval
 		return score;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	static int EvalKnightOutposts(PieceList whiteKnights, PieceList blackKnights, ulong whitePawns, ulong blackPawns)
 	{
 		return EvalKnightOutpostsForColor(whiteKnights, whitePawns, blackPawns, true)-EvalKnightOutpostsForColor(blackKnights, blackPawns, whitePawns, false);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	static int EvalBishopOutposts(PieceList whiteBishops, PieceList blackBishops, ulong whitePawns, ulong blackPawns)
 	{
 		return EvalBishopOutpostsForColor(whiteBishops, whitePawns, blackPawns, true)-EvalBishopOutpostsForColor(blackBishops, blackPawns, whitePawns, false);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	public static int Evaluate(Board board)
 	{
 		ulong whitePawns = board.board.pieceBitboards[ChessChallenge.Chess.PieceHelper.WhitePawn];

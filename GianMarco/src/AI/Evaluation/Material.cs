@@ -16,31 +16,31 @@ public static class MaterialEval
 		0, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, KingValue
 	};
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	public static int GetPieceValue(PieceType pieceType)
 	{
 		return PieceValuesAccordingToType[(int) pieceType];
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	public static int GetPieceValue(int pieceType)
 	{
 		return PieceValuesAccordingToType[pieceType];
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	public static int GetCount(Board board, int pieceType, bool white)
 	{
 		return BitOperations.PopCount(board.board.pieceBitboards[white ? pieceType : pieceType | 8]);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	public static int GetCombinedMaterialValue(Board board, int pieceType, bool white)
 	{
 		return GetCount(board, pieceType, white)*GetPieceValue(pieceType);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	
 	public static int CountMaterial(Board board)
 	{
 		return

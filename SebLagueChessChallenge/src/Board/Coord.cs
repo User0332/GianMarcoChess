@@ -24,13 +24,13 @@ namespace ChessChallenge.Chess
             this.rankIndex = BoardHelper.RankIndex(squareIndex);
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public bool IsLightSquare()
         {
             return (fileIndex + rankIndex) % 2 != 0;
         }
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public int CompareTo(Coord other)
         {
             return (fileIndex == other.fileIndex && rankIndex == other.rankIndex) ? 0 : 1;
@@ -41,7 +41,7 @@ namespace ChessChallenge.Chess
         public static Coord operator *(Coord a, int m) => new Coord(a.fileIndex * m, a.rankIndex * m);
         public static Coord operator *(int m, Coord a) => a * m;
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		
         public bool IsValidSquare() => fileIndex >= 0 && fileIndex < 8 && rankIndex >= 0 && rankIndex < 8;
         public int SquareIndex => BoardHelper.IndexFromCoord(this);
     }

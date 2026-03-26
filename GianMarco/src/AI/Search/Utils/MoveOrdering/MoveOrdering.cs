@@ -7,9 +7,10 @@ namespace GianMarco.Search.Utils;
 static class MoveOrdering
 {
 	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
-	public static int CaptureBonus = 937;
-	public static int PromotionBonus = 347;
-	public static int CastleBonus = 66;
+	public static int CaptureBonus = 900;
+	public static int PromotionBonus = 600;
+	public static int CastleBonus = 200;
+	public const int PVMoveBonus = 10000000;
 	public const byte MaxKillerMovePly = 20;
 	const int FirstKillerMoveBias = 800;
 	const int SecondKillerMoveBias = 700;
@@ -51,7 +52,7 @@ static class MoveOrdering
 		return i + 1;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+
 	public static int CalculateMoveScore(Move move, bool inNormalSearch, int depthFromRoot, int[,,] history, Move[,] killerMoves)
 	{
 		int score = 0;
@@ -82,15 +83,43 @@ static class MoveOrdering
 		return score;
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void OrderMoves(Board board, ref Span<Move> moves, bool inNormalSearch, int depthFromRoot)
+
+	public static void OrderMoves(Board board, ref Span<Move> moves, Move shouldBeFirst, bool inNormalSearch, int depthFromRoot)
 	{
 		Span<int> scores = stackalloc int[moves.Length];
 
 		int[,,] history = board.IsWhiteToMove ? whiteSearchHistory : blackSearchHistory;
 		Move[,] killerMoves = board.IsWhiteToMove ? whiteKillerMoves : blackKillerMoves;
 
-		for (byte i = 0; i < moves.Length; i++) scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+		// just for performance
+
+		if (shouldBeFirst == Move.NullMove)
+		{
+			for (int i = 0; i < moves.Length; i++)
+			{
+				scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+			}
+
+			QSort(in moves, in scores, 0, moves.Length-1);
+		}
+		else
+		{
+			bool foundPVMove = false;
+
+			for (int i = 0; i < moves.Length; i++)
+			{
+				if (!foundPVMove && moves[i] == shouldBeFirst)
+				{
+					scores[i] = PVMoveBonus;
+					foundPVMove = true;
+					continue;
+				}
+
+				scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+			}
+		}
+
+
 
 		QSort(in moves, in scores, 0, moves.Length-1);
 	}
