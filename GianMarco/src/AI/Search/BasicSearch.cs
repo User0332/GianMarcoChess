@@ -114,21 +114,38 @@ class BasicSearch
 
 			int score;
 
-			if (foundPV && !inCheck && depth >= 3) // NOTE: extension == 0 is currently a placeholder for threat detection
+			int alpha = Constants.MinEval;
+			int beta = Constants.MaxEval;
+
+			if (i == 0) // first move
 			{
-				score = -NegaMax(Math.Min(PVSDepth, depth-3), -Constants.MinEval-1, -Constants.MinEval, 1, ExtensionCap, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
+				score = -NegaMax(depth-1+extension, -beta, -alpha, 1, extension, ref currLine, true, tt, ref nodesSearched, ref maxDepthSearched);
+			}
+			else
+			{
+				score = -NegaMax(depth-1+extension, -alpha-1, -alpha, 1, extension, ref currLine, true, tt, ref nodesSearched, ref maxDepthSearched);
 
-				currLine.Fill(Move.NullMove);
-
-				if ((score > Constants.MinEval) && (score < Constants.MaxEval))
+				if ((score > alpha) && (score < beta))
 				{
-					score = -NegaMax(depth-1+extension, -Constants.MaxEval, -Constants.MinEval, 1, extension, ref currLine, i >= 8, tt, ref nodesSearched, ref maxDepthSearched);
+					score = -NegaMax(depth-1+extension, -beta, -alpha, 1, extension, ref currLine, true, tt, ref nodesSearched, ref maxDepthSearched);
 				}
 			}
-			else // Normal AlphaBeta NegaMax
-			{
-				score = -NegaMax(depth-1+extension, -Constants.MaxEval, -Constants.MinEval, 1, extension, ref currLine, i >= 8, tt, ref nodesSearched, ref maxDepthSearched);
-			}
+
+			// if (foundPV && !inCheck && depth >= 3) // NOTE: extension == 0 is currently a placeholder for threat detection
+			// {
+			// 	score = -NegaMax(Math.Min(PVSDepth, depth-3), -Constants.MinEval-1, -Constants.MinEval, 1, ExtensionCap, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
+
+			// 	currLine.Fill(Move.NullMove);
+
+			// 	if ((score > Constants.MinEval) && (score < Constants.MaxEval))
+			// 	{
+			// 		score = -NegaMax(depth-1+extension, -Constants.MaxEval, -Constants.MinEval, 1, extension, ref currLine, i >= 8, tt, ref nodesSearched, ref maxDepthSearched);
+			// 	}
+			// }
+			// else // Normal AlphaBeta NegaMax
+			// {
+			// 	score = -NegaMax(depth-1+extension, -Constants.MaxEval, -Constants.MinEval, 1, extension, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
+			// }
 
 			board.UndoMove(move);
 
@@ -316,15 +333,15 @@ class BasicSearch
 			bool sacrificePruned = false;
 
 			// custom pruning method -- sacrificial pruning -- get below 1305771 depth 9 search
-			if (!foundPV && (depth <= 3) && ((alpha-(alphaRes = NegaMaxQuiesce(-beta, -alpha, depthFromRoot, ref nodesSearched, ref maxDepthSearched))) >= 300))
-			{
-				// huge game sacrifice without sufficient depth to search it through, just use quiesece result
-				sacrificePruned = true;
-				eval = alphaRes;
+			// if (!foundPV && (depth <= 3) && ((alpha-(alphaRes = NegaMaxQuiesce(-beta, -alpha, depthFromRoot, ref nodesSearched, ref maxDepthSearched))) >= 300))
+			// {
+			// 	// huge game sacrifice without sufficient depth to search it through, just use quiesece result
+			// 	sacrificePruned = true;
+			// 	eval = alphaRes;
 
-				// move = ref Unsafe.Add(ref move, 1);
-				// continue;
-			}
+			// 	// move = ref Unsafe.Add(ref move, 1);
+			// 	// continue;
+			// }
 
 			if (!alreadyMadeQuietMove && isQuietMove) alreadyMadeQuietMove = true;
 
@@ -332,24 +349,38 @@ class BasicSearch
 
 			// PVS
 
-			if (!sacrificePruned)
+			if (Unsafe.AreSame(ref move, ref MemoryMarshal.GetReference(moves))) // first move
 			{
-				if (foundPV && !inCheck && (depth >= 3)) // NOTE: extension == 0 is currently a placeholder for threat detection
-				{
-					eval = -NegaMax(Math.Min(PVSDepth, depth-3), -alpha-1, -alpha, depthFromRoot+1, ExtensionCap, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
+				eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, true, tt, ref nodesSearched, ref maxDepthSearched);
+			}
+			else
+			{
+				eval = -NegaMax(depth-1+extension, -alpha-1, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, true, tt, ref nodesSearched, ref maxDepthSearched);
 
-					currLine.Fill(Move.NullMove);
-
-					if ((eval > alpha) && (eval < beta))
-					{
-						eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, (i >= 8) && nullMovePruningEnabled, tt, ref nodesSearched, ref maxDepthSearched);
-					}
-				}
-				else // Normal AlphaBeta NegaMax
+				if ((eval > alpha) && (eval < beta))
 				{
-					eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, (i >= 8) && nullMovePruningEnabled, tt, ref nodesSearched, ref maxDepthSearched);
+					eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, true, tt, ref nodesSearched, ref maxDepthSearched);
 				}
 			}
+
+			// if (!sacrificePruned)
+			// {
+			// 	if (foundPV && !inCheck && (depth >= 3)) // NOTE: extension == 0 is currently a placeholder for threat detection
+			// 	{
+			// 		eval = -NegaMax(Math.Min(PVSDepth, depth-3), -alpha-1, -alpha, depthFromRoot+1, ExtensionCap, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
+
+			// 		currLine.Fill(Move.NullMove);
+
+			// 		if ((eval > alpha) && (eval < beta))
+			// 		{
+			// 			eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, (i >= 8) && nullMovePruningEnabled, tt, ref nodesSearched, ref maxDepthSearched);
+			// 		}
+			// 	}
+			// 	else // Normal AlphaBeta NegaMax
+			// 	{
+			// 		eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, numExtensions + extension, ref currLine, (i >= 8) && nullMovePruningEnabled, tt, ref nodesSearched, ref maxDepthSearched);
+			// 	}
+			// }
 
 			board.UndoMove(move);
 
