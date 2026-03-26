@@ -71,7 +71,7 @@ public readonly ref struct TranspositionTable
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly void StoreEvaluation(ushort depth, int eval, byte evalType, Move move)
+	public readonly void StoreEvaluation(int depth, int eval, int evalType, Move move)
 	{
 		if (!Enabled) return;
 
@@ -84,10 +84,10 @@ public readonly struct Entry
 	public readonly ulong Key;
 	public readonly int Value;
 	public readonly Move Move;
-	public readonly ushort Depth;
-	public readonly byte NodeType;
+	public readonly int Depth;
+	public readonly int NodeType;
 
-	public Entry(ulong key, int value, Move move, ushort depth, byte nodeType)
+	public Entry(ulong key, int value, Move move, int depth, int nodeType)
 	{
 		Key = key;
 		Value = value;

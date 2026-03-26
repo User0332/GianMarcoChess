@@ -13,16 +13,25 @@ public static class MaterialEval
 	public const int QueenValue = 900;
 	public const int KingValue = 10000;
 	public static readonly int[] PieceValuesAccordingToType = {
+	public const int PawnValue = 100;
+	public const int BishopValue = 300;
+	public const int KnightValue = 300;
+	public const int RookValue = 500;
+	public const int QueenValue = 900;
+	public const int KingValue = 10000;
+	public static readonly int[] PieceValuesAccordingToType = {
 		0, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, KingValue
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int GetPieceValue(PieceType pieceType)
 	public static int GetPieceValue(PieceType pieceType)
 	{
 		return PieceValuesAccordingToType[(int) pieceType];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int GetPieceValue(int pieceType)
 	public static int GetPieceValue(int pieceType)
 	{
 		return PieceValuesAccordingToType[pieceType];
@@ -36,11 +45,14 @@ public static class MaterialEval
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int GetCombinedMaterialValue(Board board, int pieceType, bool white)
+	public static int GetCombinedMaterialValue(Board board, int pieceType, bool white)
 	{
+		return GetCount(board, pieceType, white)*GetPieceValue(pieceType);
 		return GetCount(board, pieceType, white)*GetPieceValue(pieceType);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int CountMaterial(Board board)
 	public static int CountMaterial(Board board)
 	{
 		return

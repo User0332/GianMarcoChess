@@ -1,2 +1,5 @@
 bin/
 obj/
+lichess-bot/config.yml
+venv/
+__pycache__/

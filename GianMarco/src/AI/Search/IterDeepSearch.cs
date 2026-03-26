@@ -9,18 +9,18 @@ namespace GianMarco.Search;
 
 class IterDeepSearch
 {
-	public const ushort MAX_DEPTH = 40;
-	public const ushort TTStackSizeMB = 2;
-	public const ushort TTHeapSizeMB = 115;
-	private const ushort StartDepth = 1;
+	public const uint MAX_DEPTH = 40;
+	public const uint TTStackSizeMB = 2;
+	public const uint TTHeapSizeMB = 115;
+	private const int StartDepth = 1;
 	private readonly Board board;
-	private readonly ushort maxDepth;
+	private readonly uint maxDepth;
 	private bool endSearchFlag = false;
 
 	private readonly List<BasicSearch> searches = new(20);
 
 	private readonly List<Move> bestMoves = new(20);
-	public IterDeepSearch(Board board, ushort maxDepth)
+	public IterDeepSearch(Board board, uint maxDepth)
 	{
 		if (maxDepth < StartDepth) maxDepth = StartDepth;
 		
@@ -35,7 +35,7 @@ class IterDeepSearch
 			
 			CombinationTTable sharedTT = new(board, ttSpan, TTHeapSizeMB);
 
-			for (ushort i = StartDepth; i<=maxDepth; i++)
+			for (int i = StartDepth; i <= maxDepth; i++)
 			{
 				var search = new BasicSearch(
 					board,

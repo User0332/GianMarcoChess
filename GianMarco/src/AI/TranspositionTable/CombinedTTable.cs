@@ -11,7 +11,7 @@ public readonly ref struct CombinationTTable
 	readonly Board board;
 	readonly ulong size;
 
-	public CombinationTTable(Board board, Span<Entry> entrySpan, ushort heapSizeMB) 
+	public CombinationTTable(Board board, Span<Entry> entrySpan, uint heapSizeMB) 
 	{
 		stackTTable = new(board, entrySpan);
 		heapTTable = new(
@@ -38,7 +38,7 @@ public readonly ref struct CombinationTTable
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly void StoreEvaluation(ushort depth, int eval, byte evalType, Move move)
+	public readonly void StoreEvaluation(int depth, int eval, int evalType, Move move)
 	{
 		if (Index < stackTTable.size)
 		{

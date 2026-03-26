@@ -35,6 +35,7 @@ public static class OutpostEval
 			(Pawn.PawnEval.FileBitBoard << Math.Min(7, square.File+1));
 
 		int shifter = (square.Rank+1) << 3; // << 3 same as * 8
+		int shifter = (square.Rank+1) << 3; // << 3 same as * 8
 		ulong frontMask = white ? (ulong.MaxValue << shifter) : (ulong.MaxValue >> shifter);
 
 		return frontMask & sidesMask;
@@ -46,12 +47,15 @@ public static class OutpostEval
 			(Pawn.PawnEval.FileBitBoard << Math.Min(7, square.File+1));
 
 		ulong rankMask = RankBitBoard >> (isWhite ? ((square.Rank-1) << 3) : ((square.Rank+1) << 3)); // << 3 same as * 8
+		ulong rankMask = RankBitBoard >> (isWhite ? ((square.Rank-1) << 3) : ((square.Rank+1) << 3)); // << 3 same as * 8
 
 		return sidesMask & rankMask;
 	}
 
 	static int EvalKnightOutpostsForColor(PieceList knights, ulong friendlyPawns, ulong enemyPawns, bool white)
+	static int EvalKnightOutpostsForColor(PieceList knights, ulong friendlyPawns, ulong enemyPawns, bool white)
 	{
+		int score = 0;
 		int score = 0;
 
 		foreach (Piece knight in knights)
@@ -69,7 +73,9 @@ public static class OutpostEval
 	}
 
 	static int EvalBishopOutpostsForColor(PieceList bishops, ulong friendlyPawns, ulong enemyPawns, bool white)
+	static int EvalBishopOutpostsForColor(PieceList bishops, ulong friendlyPawns, ulong enemyPawns, bool white)
 	{
+		int score = 0;
 		int score = 0;
 
 		foreach (Piece bishop in bishops)
@@ -88,17 +94,20 @@ public static class OutpostEval
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static int EvalKnightOutposts(PieceList whiteKnights, PieceList blackKnights, ulong whitePawns, ulong blackPawns)
+	static int EvalKnightOutposts(PieceList whiteKnights, PieceList blackKnights, ulong whitePawns, ulong blackPawns)
 	{
 		return (int) (EvalKnightOutpostsForColor(whiteKnights, whitePawns, blackPawns, true)-EvalKnightOutpostsForColor(blackKnights, blackPawns, whitePawns, false));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	static int EvalBishopOutposts(PieceList whiteBishops, PieceList blackBishops, ulong whitePawns, ulong blackPawns)
+	static int EvalBishopOutposts(PieceList whiteBishops, PieceList blackBishops, ulong whitePawns, ulong blackPawns)
 	{
-		return (int) (EvalBishopOutpostsForColor(whiteBishops, whitePawns, blackPawns, true)-EvalBishopOutpostsForColor(blackBishops, blackPawns, whitePawns, false));		
+		return (int) (EvalBishopOutpostsForColor(whiteBishops, whitePawns, blackPawns, true)-EvalBishopOutpostsForColor(blackBishops, blackPawns, whitePawns, false));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static int Evaluate(Board board)
 	public static int Evaluate(Board board)
 	{
 		ulong whitePawns = board.board.pieceBitboards[ChessChallenge.Chess.PieceHelper.WhitePawn];

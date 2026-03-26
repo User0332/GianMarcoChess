@@ -47,21 +47,22 @@ public static class Evaluator
 	{
 		int score = MaterialEval.CountMaterial(board);
 
-		score+=KingSafety.Evaluate(board, score);
-		
-		score+=PawnEval.Evaluate(board);
-
-		score+=OutpostEval.Evaluate(board);
-
-		score+=PiecePositionalEval.Evaluate(board);
+		score+=(
+			KingSafety.Evaluate(board, score) +
+			PawnEval.Evaluate(board) +
+			OutpostEval.Evaluate(board) +
+			PiecePositionalEval.Evaluate(board)
+		);
 
 		// Endgame Only Evals (to help with checkmates and puzzles)
 		if (GamePhaseUtils.IsEndgame(board))
 		{
-			score+=BishopMate.Evaluate(board);
-			score+=BishopAndKnightMate.Evaluate(board);
-			score+=ThreeKnightsMate.Evaluate(board);
-			score+=PawnEndgame.Evaluate(board);
+			score+=(
+				BishopMate.Evaluate(board) +
+				BishopAndKnightMate.Evaluate(board) +
+				ThreeKnightsMate.Evaluate(board) +
+				PawnEndgame.Evaluate(board)
+			);
 		}
 
 		return score;
