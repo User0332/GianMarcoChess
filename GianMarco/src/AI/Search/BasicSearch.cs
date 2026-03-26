@@ -84,7 +84,7 @@ class BasicSearch
 		currLine.Fill(Move.NullMove);
 
 		int bestScore = Constants.MinEval;
-		
+
 		Move bestMove = moves[0];
 
 		bool foundPV = false;
@@ -92,7 +92,7 @@ class BasicSearch
 		int numActionMovesSeen = 0;
 
 		for (int i = 0; i < moves.Length; i++)
-		{			
+		{
 			Move move = moves[i];
 
 			currLine.Fill(Move.NullMove);
@@ -113,11 +113,11 @@ class BasicSearch
 			int extension = 0; // (int) (MovePlayedWasInterestingMove(move) ? 1 : 0);
 
 			int score;
-			
+
 			if (foundPV && !inCheck && depth >= 3) // NOTE: extension == 0 is currently a placeholder for threat detection
 			{
 				score = -NegaMax(Math.Min(PVSDepth, depth-3), -Constants.MinEval-1, -Constants.MinEval, 1, ExtensionCap, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
-			
+
 				currLine.Fill(Move.NullMove);
 
 				if ((score > Constants.MinEval) && (score < Constants.MaxEval))
@@ -144,7 +144,7 @@ class BasicSearch
 				foundPV = true;
 			}
 		}
-		
+
 		SearchEnded = true;
 
 		BestLine = BestLine.TakeWhile((move) => move != Move.NullMove);
@@ -174,10 +174,10 @@ class BasicSearch
 		if (maxDepth == 0) return Evaluator.EvalPositionWithPerspective(board);
 
 		if (depthFromRoot > maxDepthSearched) maxDepthSearched = depthFromRoot;
-		
+
 		// if commented out, reduces runtime (recongized depth of 9 search -(200)ms), check if this leads to bad play
 		if (board.IsDraw()) return Constants.DrawValue;
-		if (board.IsInCheckmate()) return Evaluator.MatedIn(depthFromRoot);
+		if (board.IsInCheckmate()) return Evaluator.MateIn(depthFromRoot);
 
 		if (KillSearch) return WorstEvalForBot;
 
@@ -186,7 +186,7 @@ class BasicSearch
 		if (eval >= beta) return beta;
 
 		if (eval > alpha) alpha = eval;
-		
+
 		Span<Move> moves = stackalloc Move[CAPTURE_MOVE_STACKALLOC_AMT];
 
 		GetOrderedLegalMoves(ref moves, depthFromRoot, capturesOnly: true);
@@ -245,12 +245,12 @@ class BasicSearch
 		// Null move pruning -- removed for now due to occasional blunders
 		if (!inCheck && (depth >= NULL_MOVE_PRUNE_DEPTH) && nullMovePruningEnabled)
 		{
-			board.MakeMove(Move.NullMove);			
-			
+			board.MakeMove(Move.NullMove);
+
 			eval = -NegaMax(depth-NULL_MOVE_PRUNE_DEPTH, -beta, 1-beta, depthFromRoot+1, ExtensionCap, ref throwaway, false, tt, ref nodesSearched, ref maxDepthSearched);
 
 			board.UndoMove(Move.NullMove);
-			
+
 			if ((eval >= beta) && !(Evaluator.IsMateScore(eval) && Evaluator.ExtractMateInNMoves(eval) > 0))
 			{
 				return beta;
@@ -265,7 +265,7 @@ class BasicSearch
 		{
 			if (inCheck)
 			{
-				return Evaluator.MatedIn(depthFromRoot);
+				return Evaluator.MateIn(depthFromRoot);
 			}
 
 			return Constants.DrawValue; // stalemate
@@ -295,7 +295,7 @@ class BasicSearch
 			canSacrificePrune = !canSacrificePrune;
 
 			nodesSearched++;
-			
+
 			board.MakeMove(move);
 
 			bool moveWasACheck = board.IsInCheck();
@@ -307,7 +307,7 @@ class BasicSearch
 			if (!inCheck && !foundPV && depth <= FUTUILITY_PRUNE_DEPTH && alreadyMadeQuietMove && isQuietMove)
 			{
 				board.UndoMove(move);
-				
+
 				move = ref Unsafe.Add(ref move, 1);
 				continue;
 			}
@@ -322,7 +322,7 @@ class BasicSearch
 				sacrificePruned = true;
 				eval = alphaRes;
 
-				// move = ref Unsafe.Add(ref move, 1);				
+				// move = ref Unsafe.Add(ref move, 1);
 				// continue;
 			}
 
@@ -337,7 +337,7 @@ class BasicSearch
 				if (foundPV && !inCheck && (depth >= 3)) // NOTE: extension == 0 is currently a placeholder for threat detection
 				{
 					eval = -NegaMax(Math.Min(PVSDepth, depth-3), -alpha-1, -alpha, depthFromRoot+1, ExtensionCap, ref currLine, false, tt, ref nodesSearched, ref maxDepthSearched);
-				
+
 					currLine.Fill(Move.NullMove);
 
 					if ((eval > alpha) && (eval < beta))
@@ -356,15 +356,15 @@ class BasicSearch
 			if (eval >= beta)
 			{
 				tt.StoreEvaluation(depth, beta, TranspositionTable.LowerBound, move);
-				
+
 				if (!(move.IsCapture || move.IsPromotion))
 				{
 					if (depthFromRoot < MoveOrdering.MaxKillerMovePly)
-					{					
+					{
 						if (board.IsWhiteToMove) // gameplay switched when popping moves so the prev move played was actually black's
 						{
 							MoveOrdering.blackSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
-						
+
 							Move push = MoveOrdering.blackKillerMoves[depthFromRoot, 0];
 
 							MoveOrdering.blackKillerMoves[depthFromRoot, 1] = push;
@@ -373,7 +373,7 @@ class BasicSearch
 						else
 						{
 							MoveOrdering.whiteSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
-						
+
 							Move push = MoveOrdering.whiteKillerMoves[depthFromRoot, 0];
 
 							MoveOrdering.whiteKillerMoves[depthFromRoot, 1] = push;
@@ -381,7 +381,7 @@ class BasicSearch
 						}
 					}
 				}
-				
+
 				return beta;
 			}
 
