@@ -1,0 +1,17 @@
+test.py
+.vscode/
+GianMarco/bin/
+GianMarco/obj/
+GianMarco/GianMarco.sln
+venv/
+__pycache__/
+uci-gui/
+Testing/versions/
+lichess-bot/config.yml
+# !lichess-bot/lichess-bot-modified.py
+asearch.txt
+
+
+# SebLagueChessChallenge/
+SebLagueChessChallenge/bin/
+SebLagueChessChallenge/obj/
