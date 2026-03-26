@@ -6,24 +6,24 @@ namespace GianMarco.Evaluation.Material;
 
 public static class MaterialEval
 {
-	public const short PawnValue = 100;
-	public const short BishopValue = 300;
-	public const short KnightValue = 300;
-	public const short RookValue = 500;
-	public const short QueenValue = 900;
-	public const short KingValue = 10000;
-	public static readonly short[] PieceValuesAccordingToType = {
+	public const int PawnValue = 100;
+	public const int BishopValue = 300;
+	public const int KnightValue = 300;
+	public const int RookValue = 500;
+	public const int QueenValue = 900;
+	public const int KingValue = 10000;
+	public static readonly int[] PieceValuesAccordingToType = {
 		0, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, KingValue
 	};
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short GetPieceValue(PieceType pieceType)
+	public static int GetPieceValue(PieceType pieceType)
 	{
 		return PieceValuesAccordingToType[(int) pieceType];
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short GetPieceValue(int pieceType)
+	public static int GetPieceValue(int pieceType)
 	{
 		return PieceValuesAccordingToType[pieceType];
 	}
@@ -31,19 +31,19 @@ public static class MaterialEval
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static byte GetCount(Board board, int pieceType, bool white)
 	{
-		return (byte) BitOperations.PopCount(board.board.pieceBitboards[white ? pieceType : pieceType | 8]);
+		return (byte) BitOperations.PopCount((nuint) board.board.pieceBitboards[white ? pieceType : pieceType | 8]);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short GetCombinedMaterialValue(Board board, int pieceType, bool white)
+	public static int GetCombinedMaterialValue(Board board, int pieceType, bool white)
 	{
-		return (short) (GetCount(board, pieceType, white)*GetPieceValue(pieceType));
+		return GetCount(board, pieceType, white)*GetPieceValue(pieceType);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short CountMaterial(Board board)
+	public static int CountMaterial(Board board)
 	{
-		return (short) (
+		return (
 			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, false)+
 			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, false)+
 			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, false)+

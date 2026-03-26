@@ -5,7 +5,7 @@ namespace GianMarco.Evaluation.Position;
 
 public static class PiecePositionalEval
 {
-	static readonly sbyte[] KnightBonuses = {
+	static readonly int[] KnightBonuses = {
 		-10, -10, -10, -10, -10, -10, -10, -10,
 		-10, 0  , 0  , 0  , 0  , 0  , 0  , -10,
 		-10, 0  , 5  , 15 , 15 , 5  , 0  , -10,
@@ -16,7 +16,7 @@ public static class PiecePositionalEval
 		-10, -10, -10, -10, -10, -10, -10, -10,
 	};
 
-	static readonly sbyte[] BishopBonuses = {
+	static readonly int[] BishopBonuses = {
 		-15, -10, -5 , -5 , -5 , -5 , -10, -15,
 		-10, 0  , 5  , 5  , 5  , 5  , 0  , -10,
 		-5 , 5  , 5  , 15 , 15 , 5  , 5  , -5 ,
@@ -27,7 +27,7 @@ public static class PiecePositionalEval
 		-15, -10, -5 , -5 , -5 , -5 , -10, -15,
 	};
 
-	static readonly sbyte[] RookBonuses = {
+	static readonly int[] RookBonuses = {
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -38,9 +38,9 @@ public static class PiecePositionalEval
 		0, 0, 0, 0, 0, 0, 0, 0,
 	};
 
-	static short EvaluateForColor(Board board, bool white)
+	static int EvaluateForColor(Board board, bool white)
 	{
-		short score = 0;
+		int score = 0;
 
 		PieceList knights = board.GetPieceList(PieceType.Knight, white);
 		PieceList bishops = board.GetPieceList(PieceType.Bishop, white);
@@ -59,8 +59,8 @@ public static class PiecePositionalEval
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short Evaluate(Board board) // we want pieces closer to the center
+	public static int Evaluate(Board board) // we want pieces closer to the center
 	{
-		return (short) (EvaluateForColor(board, true)-EvaluateForColor(board, false));
+		return EvaluateForColor(board, true)-EvaluateForColor(board, false);
 	}
 }

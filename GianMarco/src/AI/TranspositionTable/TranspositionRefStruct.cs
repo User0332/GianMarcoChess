@@ -52,7 +52,7 @@ public readonly ref struct RefStructTTable
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public readonly void StoreEvaluation(ushort depth, int eval, byte evalType, Move move)
+	public readonly void StoreEvaluation(int depth, int eval, int evalType, Move move)
 	{
 		if (!Enabled) return;
 

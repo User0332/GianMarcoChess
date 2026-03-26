@@ -13,8 +13,8 @@ public static class PreBuiltInterpreter
 	{
 		if (cmdArgs[1] == "startpos")
 		{			
-			currBoard.board.LoadPosition(ChessChallenge.Chess.FenUtility.StartPositionFEN);
-
+			currBoard = Board.CreateBoardFromFEN(ChessChallenge.Chess.FenUtility.StartPositionFEN);
+			
 			if (cmdArgs.Length > 2 && cmdArgs[2] == "moves")
 			{
 				foreach (string move in cmdArgs.Skip(3))
@@ -27,6 +27,7 @@ public static class PreBuiltInterpreter
 			
 			return;
 		}
+
 		if (cmdArgs[1] == "fen")
 		{
 			var fenStringArr = cmdArgs.Skip(2).TakeWhile(arg => arg != "moves");
@@ -34,7 +35,6 @@ public static class PreBuiltInterpreter
 
 			currBoard = Board.CreateBoardFromFEN(fenString);
 			
-
 			if (cmdArgs.Length > fenStringArr.Count()+2)
 			{
 				foreach (string move in cmdArgs.Skip(fenStringArr.Count()+3))
@@ -50,14 +50,14 @@ public static class PreBuiltInterpreter
 	static void Go(string[] cmdArgs)
 	{
 		int depthIdx = -1;
-		ushort searchDepth = IterDeepSearch.MAX_DEPTH;
+		uint searchDepth = IterDeepSearch.MAX_DEPTH;
 
 		if ((depthIdx = Array.IndexOf(cmdArgs, "depth")) != -1)
 		{
 			string depthString = cmdArgs[depthIdx+1];
 
 			if (depthString != "infinite")
-				searchDepth = ushort.Parse(depthString);
+				searchDepth = uint.Parse(depthString);
 		}
 
 		int wtimeIdx = -1;
@@ -103,7 +103,7 @@ public static class PreBuiltInterpreter
 
 	static void Stop()
 	{
-		searcher.EndSearch();
+		searcher?.EndSearch();
 
 		searcher = null;
 	}

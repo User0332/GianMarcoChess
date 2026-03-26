@@ -7,26 +7,21 @@ namespace GianMarco.Search.Utils;
 static class MoveOrdering
 {
 	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
-	public static short CaptureBonus = 937;
-	public static short PromotionBonus = 347;
-	public static short CastleBonus = 66;
+	public static int CaptureBonus = 937;
+	public static int PromotionBonus = 347;
+	public static int CastleBonus = 66;
 	public const byte MaxKillerMovePly = 20;
-	const short FirstKillerMoveBias = 800;
-	const short SecondKillerMoveBias = 700;
-	const short CloseToFirstKillerMoveBias = 600;
-	const short CloseToSecondKillerMoveBias = 500;
+	const int FirstKillerMoveBias = 800;
+	const int SecondKillerMoveBias = 700;
+	const int CloseToFirstKillerMoveBias = 600;
+	const int CloseToSecondKillerMoveBias = 500;
+	const int HistoryBonusMultiplier = 1;
+	public static Move[,] whiteKillerMoves = new Move[MaxKillerMovePly, 2];
+	public static Move[,] blackKillerMoves = new Move[MaxKillerMovePly, 2];
+	public static int[,,] whiteSearchHistory = new int[MaxKillerMovePly, 64, 64];
+	public static int[,,] blackSearchHistory = new int[MaxKillerMovePly, 64, 64];
 
-	public static Move[][] killerMoves = new Move[MaxKillerMovePly][] { 
-		new Move[2], new Move[2], new Move[2], new Move[2],
-		new Move[2], new Move[2], new Move[2], new Move[2],
-		new Move[2], new Move[2], new Move[2], new Move[2],
-		new Move[2], new Move[2], new Move[2], new Move[2],
-		new Move[2], new Move[2], new Move[2], new Move[2],
-	};
-
-	public static short[,] searchHistory = new short[64, 64];
-
-	static void QSort(in Span<Move> values, in Span<short> scores, int low, int high)
+	static void QSort(in Span<Move> values, in Span<int> scores, int low, int high)
 	{
 		if (low < high)
 		{
@@ -36,9 +31,9 @@ static class MoveOrdering
 		}
 	}
 
-	static int Partition(in Span<Move> values, in Span<short> scores, int low, int high)
+	static int Partition(in Span<Move> values, in Span<int> scores, int low, int high)
 	{
-		short pivotScore = scores[high];
+		int pivotScore = scores[high];
 		int i = low - 1;
 
 		for (int j = low; j <= high - 1; j++)
@@ -57,40 +52,45 @@ static class MoveOrdering
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short CalculateMoveScore(Move move, bool inNormalSearch, ushort depthFromRoot)
+	public static int CalculateMoveScore(Move move, bool inNormalSearch, int depthFromRoot, int[,,] history, Move[,] killerMoves)
 	{
-		short score = 0;
+		int score = 0;
 
 		if (move.IsCapture)
-			score+=(short) (CaptureBonus+MaterialEval.GetPieceValue(move.CapturePieceType)-MaterialEval.GetPieceValue(move.MovePieceType));
-		else
+			score+=CaptureBonus+MaterialEval.GetPieceValue(move.CapturePieceType)-MaterialEval.GetPieceValue(move.MovePieceType);
+		else if (inNormalSearch)
 		{
 			if (move.IsCastles)
 				score+=CastleBonus;
 
 			// killer move ordering
-			if 	(inNormalSearch && (depthFromRoot < MaxKillerMovePly))
+			if 	(depthFromRoot < MaxKillerMovePly)
 			{
-				if (killerMoves[depthFromRoot][0].Equals(move))
-					return (short) (score+FirstKillerMoveBias);
+				if (killerMoves[depthFromRoot, 0].Equals(move))
+					return score+FirstKillerMoveBias;
 
-				if (killerMoves[depthFromRoot][1].Equals(move))
-					return (short) (score+SecondKillerMoveBias);
+				if (killerMoves[depthFromRoot, 1].Equals(move))
+					return score+SecondKillerMoveBias;
 			}
 		}
 
 		if (move.IsPromotion)
-			score+=(short) (PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType));
+			score+=PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType);
+
+		if (depthFromRoot < MaxKillerMovePly) score+=history[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]*HistoryBonusMultiplier;
 
 		return score;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void OrderMoves(Board board, ref Span<Move> moves, bool inNormalSearch, ushort depthFromRoot)
+	public static void OrderMoves(Board board, ref Span<Move> moves, bool inNormalSearch, int depthFromRoot)
 	{
-		Span<short> scores = stackalloc short[moves.Length];
+		Span<int> scores = stackalloc int[moves.Length];
 
-		for (byte i = 0; i < moves.Length; i++) scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot);
+		int[,,] history = board.IsWhiteToMove ? whiteSearchHistory : blackSearchHistory;
+		Move[,] killerMoves = board.IsWhiteToMove ? whiteKillerMoves : blackKillerMoves;
+
+		for (byte i = 0; i < moves.Length; i++) scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
 
 		QSort(in moves, in scores, 0, moves.Length-1);
 	}

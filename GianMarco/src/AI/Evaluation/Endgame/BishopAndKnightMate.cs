@@ -4,9 +4,9 @@ namespace GianMarco.Evaluation.Endgame;
 
 public static class BishopAndKnightMate
 {
-	public static short Evaluate(Board board)
+	public static int Evaluate(Board board)
 	{
-		short score = 0;
+		int score = 0;
 
 		return score;
 	}
