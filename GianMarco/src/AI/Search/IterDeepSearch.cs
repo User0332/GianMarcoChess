@@ -39,7 +39,7 @@ class IterDeepSearch
 			{
 				var search = new BasicSearch(
 					board,
-					bestMoves.ToList() // copy the list
+					[..bestMoves] // copy the list
 				);
 
 				searches.Add(search);

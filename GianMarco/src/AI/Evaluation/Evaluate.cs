@@ -29,7 +29,7 @@ public static class Evaluator
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static int MateIn(ushort ply)
+	public static int MateIn(int ply)
 	{
 		return Constants.MinEval+ply;
 	}

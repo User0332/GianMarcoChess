@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using BenchmarkDotNet.Attributes;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
 using GianMarco.Search.Utils;

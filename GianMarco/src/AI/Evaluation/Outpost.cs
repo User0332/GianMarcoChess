@@ -5,7 +5,7 @@ namespace GianMarco.Evaluation.Outpost;
 
 public static class OutpostEval
 {
-	static readonly byte[] WhiteOutpostRankBonuses = {
+	static readonly int[] WhiteOutpostRankBonuses = {
 		0,
 		0,
 		0,
@@ -16,7 +16,7 @@ public static class OutpostEval
 		20
 	};
 
-	static readonly byte[] BlackOutpostRankBonuses = {
+	static readonly int[] BlackOutpostRankBonuses = {
 		20,
 		30,
 		25,
@@ -34,7 +34,7 @@ public static class OutpostEval
 		ulong sidesMask = (Pawn.PawnEval.FileBitBoard << Math.Max(0, square.File-1)) |
 			(Pawn.PawnEval.FileBitBoard << Math.Min(7, square.File+1));
 
-		short shifter = (short) ((square.Rank+1) << 3); // << 3 same as * 8
+		int shifter = (square.Rank+1) << 3; // << 3 same as * 8
 		ulong frontMask = white ? (ulong.MaxValue << shifter) : (ulong.MaxValue >> shifter);
 
 		return frontMask & sidesMask;
@@ -45,14 +45,14 @@ public static class OutpostEval
 		ulong sidesMask = (Pawn.PawnEval.FileBitBoard << Math.Max(0, square.File-1)) |
 			(Pawn.PawnEval.FileBitBoard << Math.Min(7, square.File+1));
 
-		ulong rankMask = RankBitBoard >> (short) (isWhite ? ((square.Rank-1) << 3) : ((square.Rank+1) << 3)); // << 3 same as * 8
+		ulong rankMask = RankBitBoard >> (isWhite ? ((square.Rank-1) << 3) : ((square.Rank+1) << 3)); // << 3 same as * 8
 
 		return sidesMask & rankMask;
 	}
 
-	static short EvalKnightOutpostsForColor(PieceList knights, ulong friendlyPawns, ulong enemyPawns, bool white)
+	static int EvalKnightOutpostsForColor(PieceList knights, ulong friendlyPawns, ulong enemyPawns, bool white)
 	{
-		short score = 0;
+		int score = 0;
 
 		foreach (Piece knight in knights)
 		{
@@ -68,9 +68,9 @@ public static class OutpostEval
 		return score;
 	}
 
-	static short EvalBishopOutpostsForColor(PieceList bishops, ulong friendlyPawns, ulong enemyPawns, bool white)
+	static int EvalBishopOutpostsForColor(PieceList bishops, ulong friendlyPawns, ulong enemyPawns, bool white)
 	{
-		short score = 0;
+		int score = 0;
 
 		foreach (Piece bishop in bishops)
 		{
@@ -87,19 +87,19 @@ public static class OutpostEval
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short EvalKnightOutposts(PieceList whiteKnights, PieceList blackKnights, ulong whitePawns, ulong blackPawns)
+	static int EvalKnightOutposts(PieceList whiteKnights, PieceList blackKnights, ulong whitePawns, ulong blackPawns)
 	{
-		return (short) (EvalKnightOutpostsForColor(whiteKnights, whitePawns, blackPawns, true)-EvalKnightOutpostsForColor(blackKnights, blackPawns, whitePawns, false));
+		return (int) (EvalKnightOutpostsForColor(whiteKnights, whitePawns, blackPawns, true)-EvalKnightOutpostsForColor(blackKnights, blackPawns, whitePawns, false));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	static short EvalBishopOutposts(PieceList whiteBishops, PieceList blackBishops, ulong whitePawns, ulong blackPawns)
+	static int EvalBishopOutposts(PieceList whiteBishops, PieceList blackBishops, ulong whitePawns, ulong blackPawns)
 	{
-		return (short) (EvalBishopOutpostsForColor(whiteBishops, whitePawns, blackPawns, true)-EvalBishopOutpostsForColor(blackBishops, blackPawns, whitePawns, false));		
+		return (int) (EvalBishopOutpostsForColor(whiteBishops, whitePawns, blackPawns, true)-EvalBishopOutpostsForColor(blackBishops, blackPawns, whitePawns, false));		
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static short Evaluate(Board board)
+	public static int Evaluate(Board board)
 	{
 		ulong whitePawns = board.board.pieceBitboards[ChessChallenge.Chess.PieceHelper.WhitePawn];
 		ulong blackPawns = board.board.pieceBitboards[ChessChallenge.Chess.PieceHelper.BlackPawn];
@@ -110,6 +110,6 @@ public static class OutpostEval
 		PieceList blackKnights = board.allPieceLists[ChessChallenge.Chess.PieceHelper.BlackKnight];
 
 
-		return (short) (EvalBishopOutposts(whiteBishops, blackBishops, whitePawns, blackPawns)+EvalKnightOutposts(whiteKnights, blackKnights, whitePawns, blackPawns));
+		return (int) (EvalBishopOutposts(whiteBishops, blackBishops, whitePawns, blackPawns)+EvalKnightOutposts(whiteKnights, blackKnights, whitePawns, blackPawns));
 	}
 }

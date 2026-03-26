@@ -103,7 +103,7 @@ public static class PreBuiltInterpreter
 
 	static void Stop()
 	{
-		searcher.EndSearch();
+		searcher?.EndSearch();
 
 		searcher = null;
 	}
