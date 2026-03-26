@@ -602,30 +602,15 @@ def play_game(li: lichess.Lichess,
         prior_game = None
         board = chess.Board()
         upd: dict[str, Any] = game.state
-        
+
         start = datetime.datetime.now()
         saidmsg = False
-        
+
         saidmsg2 = False
 
         saidmsg3 = False
 
         while not terminated:
-            if (((datetime.datetime.now() - start) > datetime.timedelta(minutes=1)) and not saidmsg):
-                saidmsg = True
-                conversation.send_message("player", "bro needs to stop waffling")
-                conversation.send_message("spectator", "bro needs to stop waffling")
-
-            if (((datetime.datetime.now() - start) > datetime.timedelta(minutes=3)) and not saidmsg2):
-                saidmsg2 = True
-                conversation.send_message("player", "mdr je vais gagner")
-                conversation.send_message("spectator", "mdr je vais gagner")
-
-            if (((datetime.datetime.now() - start) > datetime.timedelta(minutes=5)) and not saidmsg3):
-                saidmsg3 = True
-                conversation.send_message("player", "OK - I'm not *that* good at chess")
-                conversation.send_message("spectator", "OK - I'm not *that* good at chess")
-
             move_attempted = False
             try:
                 upd = upd or next_update(lines)
