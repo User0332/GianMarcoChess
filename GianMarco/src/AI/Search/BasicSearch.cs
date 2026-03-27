@@ -1,26 +1,23 @@
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using BenchmarkDotNet.Attributes;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
+using GianMarco.Evaluation.Material;
 using GianMarco.Search.Utils;
 using GianMarco.TTable;
 
 namespace GianMarco.Search;
 
-class BasicSearch
+sealed class BasicSearch
 {
 	const int MOVE_STACKALLOC_AMT = 218;
 	const int CAPTURE_MOVE_STACKALLOC_AMT = 100;
-	const int TTSizeMB = 128;
-	const int ExtensionCap = 10;
-	const int NullMovePruneThreshold = 5;
-	const int PVSDepth = 2;
-	const int FutilityPruneMoveScoreThreshold = 300; // THIS SHOULD BE EQUAL TO THE MoveOrdering.CastleBonus VALUE
 	const int TTDepthGraceThreshold = 1;
-	const int NullMovePruneDepth = 3;
 	const int NullMovePruneDepthReduction = 4;
 	const int LateMoveDepthReduction = 2;
+	const int BadCaptureMoveReduction = 4;
+	const int FutilityPruningDepth = 1;
+	const int FutilityPruningMargin = 200;
+
 	public const int MaxLineSize = 10;
 
 	private readonly Board board;
@@ -119,8 +116,7 @@ class BasicSearch
 
 			int eval;
 
-			// late move reduction
-			if (!inCheck && i >= 6 && isQuietMove)
+			if (!inCheck && i >= 6 && isQuietMove)	// late move reduction
 			{
 				var reducedDepth = Math.Max(depth - LateMoveDepthReduction, 0);
 
@@ -215,6 +211,9 @@ class BasicSearch
 
 			nodesSearched++;
 
+			// SEE pruning
+			// if (move.IsCapture && StaticExchangeEvaluation.IsLosingCapture(board, move)) continue;
+
 			board.MakeMove(move);
 
 			eval = -NegaMaxQuiesce(-beta, -alpha, depthFromRoot+1, ref nodesSearched, ref maxDepthSearched, maxDepth-1);
@@ -251,17 +250,20 @@ class BasicSearch
 		if (depth == 0) return NegaMaxQuiesce(alpha, beta, depthFromRoot, ref nodesSearched, ref maxDepthSearched);
 
 		bool inCheck = board.IsInCheck();
+		// int currentStaticEval = Evaluator.EvalPositionWithPerspective(board);
 		int eval = 0;
 
 		// Null move pruning
-		// TODO: check if only pawns exist and if so, do not null move prune because of zugzwang
+		// TODO: check if only pawns exist and if so, do not null move prune because of zugzwang possibilities
 		if (!inCheck && nullMovePruningEnabled)
 		{
 			Span<Move> throwaway = stackalloc Move[MaxLineSize];
 
 			board.MakeMove(Move.NullMove);
 
-			eval = -NegaMax(Math.Max(depth-NullMovePruneDepthReduction, 0), -beta, 1-beta, depthFromRoot+1, throwaway, true, tt, ref nodesSearched, ref maxDepthSearched, []);
+			var reducedDepth = Math.Max(depth - NullMovePruneDepthReduction, 0);
+
+			eval = -NegaMax(reducedDepth, -beta, 1-beta, depthFromRoot+1, throwaway, true, tt, ref nodesSearched, ref maxDepthSearched, []);
 
 			board.UndoMove(Move.NullMove);
 
@@ -298,7 +300,6 @@ class BasicSearch
 		int evalBound = TranspositionTable.UpperBound;
 		Move bestMove = moves[0];
 
-		bool canSacrificePrune = true;
 		int numActionMovesSeen = 0;
 
 		for (int i = 0; i < moves.Length; i++)
@@ -306,7 +307,6 @@ class BasicSearch
 			Move move = moves[i];
 
 			currLine.Fill(Move.NullMove);
-			canSacrificePrune = !canSacrificePrune;
 
 			nodesSearched++;
 
@@ -319,8 +319,7 @@ class BasicSearch
 
 			int extension = 0; // MovePlayedWasInterestingMove(move) ? 1 : 0; // FOR NOW, EXTENSIONS ARE DISABLED - LEADS TO LESS NODE SEARCHES
 
-			// late move reduction
-			if (!inCheck && i >= 6 && isQuietMove)
+			if (!inCheck && i >= 6 && isQuietMove) // late move reduction
 			{
 				var reducedDepth = Math.Max(depth - LateMoveDepthReduction, 0);
 
@@ -360,16 +359,7 @@ class BasicSearch
 				{
 					if (depthFromRoot < MoveOrdering.MaxKillerMovePly)
 					{
-						if (board.IsWhiteToMove) // gameplay switched when popping moves so the prev move played was actually black's
-						{
-							MoveOrdering.blackSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
-
-							Move push = MoveOrdering.blackKillerMoves[depthFromRoot, 0];
-
-							MoveOrdering.blackKillerMoves[depthFromRoot, 1] = push;
-							MoveOrdering.blackKillerMoves[depthFromRoot, 0] = move;
-						}
-						else
+						if (board.IsWhiteToMove)
 						{
 							MoveOrdering.whiteSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
 
@@ -377,6 +367,15 @@ class BasicSearch
 
 							MoveOrdering.whiteKillerMoves[depthFromRoot, 1] = push;
 							MoveOrdering.whiteKillerMoves[depthFromRoot, 0] = move;
+						}
+						else
+						{
+							MoveOrdering.blackSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
+
+							Move push = MoveOrdering.blackKillerMoves[depthFromRoot, 0];
+
+							MoveOrdering.blackKillerMoves[depthFromRoot, 1] = push;
+							MoveOrdering.blackKillerMoves[depthFromRoot, 0] = move;
 						}
 					}
 				}

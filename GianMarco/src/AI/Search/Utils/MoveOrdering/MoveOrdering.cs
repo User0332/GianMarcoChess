@@ -1,5 +1,4 @@
 using GianMarco.Evaluation.Material;
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
 namespace GianMarco.Search.Utils;
@@ -7,16 +6,16 @@ namespace GianMarco.Search.Utils;
 static class MoveOrdering
 {
 	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
-	public static int CaptureBonus = 900;
-	public static int PromotionBonus = 600;
-	public static int CastleBonus = 200;
-	public const int PVMoveBonus = 10000000;
+	public static int GoodCaptureBonus = 500;
+	public static int PromotionBonus = 2000;
+	const int PVMoveBonus = 10000000;
+	const int BadExchangePenalty = -10000;
 	public const byte MaxKillerMovePly = 20;
-	const int FirstKillerMoveBias = 800;
-	const int SecondKillerMoveBias = 700;
-	const int CloseToFirstKillerMoveBias = 600;
-	const int CloseToSecondKillerMoveBias = 500;
-	const int HistoryBonusMultiplier = 1;
+	const int FirstKillerMoveBias = 700;
+	const int SecondKillerMoveBias = 600;
+	const int CloseToFirstKillerMoveBias = 650;
+	const int CloseToSecondKillerMoveBias = 600;
+	const int HistoryBonusMultiplier = 0;
 	public static Move[,] whiteKillerMoves = new Move[MaxKillerMovePly, 2];
 	public static Move[,] blackKillerMoves = new Move[MaxKillerMovePly, 2];
 	public static int[,,] whiteSearchHistory = new int[MaxKillerMovePly, 64, 64];
@@ -53,25 +52,37 @@ static class MoveOrdering
 	}
 
 
-	public static int CalculateMoveScore(Move move, bool inNormalSearch, int depthFromRoot, int[,,] history, Move[,] killerMoves)
+	public static int CalculateMoveScore(Board board, Move move, bool inNormalSearch, int depthFromRoot, int[,,] history, Move[,] killerMoves)
 	{
 		int score = 0;
 
 		if (move.IsCapture)
-			score+=CaptureBonus+MaterialEval.GetPieceValue(move.CapturePieceType)-MaterialEval.GetPieceValue(move.MovePieceType);
+		{
+			var rawSEEScore = StaticExchangeEvaluation.EvaluateCapture(board, move);
+
+			if (rawSEEScore < 0)
+			{
+				score = BadExchangePenalty;
+			}
+			else
+			{
+				score+=rawSEEScore+GoodCaptureBonus;
+			}
+		}
 		else if (inNormalSearch)
 		{
-			if (move.IsCastles)
-				score+=CastleBonus;
-
 			// killer move ordering
 			if 	(depthFromRoot < MaxKillerMovePly)
 			{
 				if (killerMoves[depthFromRoot, 0].Equals(move))
+				{
 					return score+FirstKillerMoveBias;
+				}
 
 				if (killerMoves[depthFromRoot, 1].Equals(move))
+				{
 					return score+SecondKillerMoveBias;
+				}
 			}
 		}
 
@@ -97,7 +108,7 @@ static class MoveOrdering
 		{
 			for (int i = 0; i < moves.Length; i++)
 			{
-				scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+				scores[i] = CalculateMoveScore(board, moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
 			}
 
 			QSort(in moves, in scores, 0, moves.Length-1);
@@ -115,7 +126,7 @@ static class MoveOrdering
 					continue;
 				}
 
-				scores[i] = CalculateMoveScore(moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+				scores[i] = CalculateMoveScore(board, moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
 			}
 		}
 

@@ -12,7 +12,7 @@ namespace ChessChallenge.API
 	public sealed class Board
 	{
 		public readonly Chess.Board board;
-		readonly APIMoveGen moveGen;
+		public readonly APIMoveGen moveGen;
 		public RepetitionTable repetitionTable;
 
 		public readonly PieceList[] allPieceLists;
@@ -77,7 +77,7 @@ namespace ChessChallenge.API
 		/// The move is assumed to be legal, and may result in errors if it is not.
 		/// Can be undone with the UndoMove method.
 		/// </summary>
-		
+
 		public void MakeMove(Move move)
 		{
 			if (!move.IsNull)
@@ -97,7 +97,7 @@ namespace ChessChallenge.API
 		/// <summary>
 		/// Undo a move that was made with the MakeMove method
 		/// </summary>
-		
+
 		public void UndoMove(Move move)
 		{
 			if (!move.IsNull)
@@ -120,7 +120,7 @@ namespace ChessChallenge.API
 		/// Note: skipping a turn is not allowed in the game, but it can be used as a search technique.
 		/// Skipped turns can be undone with UndoSkipTurn()
 		/// </summary>
-		
+
 		public bool TrySkipTurn()
 		{
 			if (IsInCheck())
@@ -140,7 +140,7 @@ namespace ChessChallenge.API
         /// Note: skipping a turn is not allowed in the game, but it can be used as a search technique.
 		/// Skipped turns can be undone with UndoSkipTurn()
         /// </summary>
-        
+
 		public void ForceSkipTurn()
         {
             board.MakeNullMove();
@@ -150,7 +150,7 @@ namespace ChessChallenge.API
         /// <summary>
         /// Undo a turn that was succesfully skipped with TrySkipTurn() or ForceSkipTurn()
         /// </summary>
-        
+
 		public void UndoSkipTurn()
 		{
 			board.UnmakeNullMove();
@@ -215,13 +215,13 @@ namespace ChessChallenge.API
 		/// <summary>
 		/// Test if the player to move is in check in the current position.
 		/// </summary>
-		
+
 		public bool IsInCheck() => moveGen.IsInitialized ? moveGen.InCheck() : board.IsInCheck();
 
 		/// <summary>
 		/// Test if the current position is checkmate
 		/// </summary>
-		
+
 		public bool IsInCheckmate() => IsInCheck() && HasZeroLegalMoves();
 
         /// <summary>
@@ -229,7 +229,7 @@ namespace ChessChallenge.API
         /// Note: this function will return true if the same position has occurred twice on the board (rather than 3 times,
         /// which is when the game is actually drawn). This quirk is to help bots avoid repeating positions unnecessarily.
         /// </summary>
-        
+
 		public bool IsDraw()
 		{
 			return IsRepeatedPosition() || IsFiftyMoveDraw() || IsInsufficientMaterial() || IsInStalemate();
@@ -238,13 +238,13 @@ namespace ChessChallenge.API
         /// <summary>
         /// Test if the current position is a draw due to stalemate
         /// </summary>
-        
+
 		public bool IsInStalemate() => !IsInCheck() && HasZeroLegalMoves();
 
         /// <summary>
         /// Test if the current position is a draw due to the fifty move rule
         /// </summary>
-        
+
 		public bool IsFiftyMoveDraw() => board.currentGameState.fiftyMoveCounter >= 100;
 
         /// <summary>
@@ -252,14 +252,14 @@ namespace ChessChallenge.API
         /// This includes both positions in the actual game, and positions reached by
         /// making moves while the bot is thinking.
         /// </summary>
-        
+
 		public bool IsRepeatedPosition() => depth > 0 && repetitionTable.Contains(board.ZobristKey);
 
 		/// <summary>
 		/// Test if there are sufficient pieces remaining on the board to potentially deliver checkmate.
 		/// If not, the game is automatically a draw.
 		/// </summary>
-		
+
 		public bool IsInsufficientMaterial() => Arbiter.InsufficentMaterial(board);
 
         /// <summary>
@@ -267,7 +267,7 @@ namespace ChessChallenge.API
         /// Note that having the right to castle doesn't necessarily mean castling is legal right now
         /// (for example, a piece might be in the way, or player might be in check, etc).
         /// </summary>
-        
+
 		public bool HasKingsideCastleRight(bool white) => board.currentGameState.HasKingsideCastleRight(white);
 
 		/// <summary>
@@ -275,13 +275,13 @@ namespace ChessChallenge.API
 		/// Note that having the right to castle doesn't necessarily mean castling is legal right now
 		/// (for example, a piece might be in the way, or player might be in check, etc).
 		/// </summary>
-		
+
 		public bool HasQueensideCastleRight(bool white) => board.currentGameState.HasQueensideCastleRight(white);
 
 		/// <summary>
 		/// Gets the square that the king (of the given colour) is currently on.
 		/// </summary>
-		
+
 		public Square GetKingSquare(bool white)
 		{
 			int colIndex = white ? Chess.Board.WhiteIndex : Chess.Board.BlackIndex;
@@ -291,7 +291,7 @@ namespace ChessChallenge.API
         /// <summary>
         /// Gets the piece on the given square. If the square is empty, the piece will have a PieceType of None.
         /// </summary>
-       
+
 	    public Piece GetPiece(Square square)
         {
             int p = board.Square[square.Index];
@@ -302,7 +302,7 @@ namespace ChessChallenge.API
         /// <summary>
         /// Gets a list of pieces of the given type and colour
         /// </summary>
-        
+
 		public PieceList GetPieceList(PieceType pieceType, bool white)
 		{
 			return allPieceLists[PieceHelper.MakePiece((int)pieceType, white)];
@@ -312,17 +312,17 @@ namespace ChessChallenge.API
 		/// Pawns(white), Knights (white), Bishops (white), Rooks (white), Queens (white), King (white),
 		/// Pawns (black), Knights (black), Bishops (black), Rooks (black), Queens (black), King (black)
 		/// </summary>
-		
+
 		public PieceList[] GetAllPieceLists()
 		{
 			return validPieceLists;
 		}
-		
+
 		/// <summary>
 		/// Is the given square attacked by the opponent?
 		/// (opponent being whichever player doesn't currently have the right to move)
 		/// </summary>
-		
+
 		public bool SquareIsAttackedByOpponent(Square square)
 		{
 			return BitboardHelper.SquareIsSet(moveGen.GetOpponentAttackMap(board), square);
@@ -332,14 +332,14 @@ namespace ChessChallenge.API
 		/// <summary>
 		/// FEN representation of the current position
 		/// </summary>
-		
+
 		public string GetFenString() => FenUtility.CurrentFen(board);
 
         /// <summary>
         /// 64-bit number where each bit that is set to 1 represents a
         /// square that contains a piece of the given type and colour.
         /// </summary>
-        
+
 		public ulong GetPieceBitboard(PieceType pieceType, bool white)
 		{
 			return board.pieceBitboards[PieceHelper.MakePiece((int)pieceType, white)];
@@ -479,7 +479,7 @@ namespace ChessChallenge.API
             return new Board(boardCore);
         }
 
-		
+
         void OnPositionChanged()
         {
             moveGen.NotifyPositionChanged();
@@ -488,7 +488,7 @@ namespace ChessChallenge.API
 			hasCachedMoveCount = false;
         }
 
-		
+
 		bool HasZeroLegalMoves()
 		{
 			if (hasCachedMoveCount)
