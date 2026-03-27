@@ -11,12 +11,9 @@ sealed class BasicSearch
 {
 	const int MOVE_STACKALLOC_AMT = 218;
 	const int CAPTURE_MOVE_STACKALLOC_AMT = 100;
-	const int TTDepthGraceThreshold = 1;
+	const int TTDepthGraceThreshold = 0;
 	const int NullMovePruneDepthReduction = 4;
 	const int LateMoveDepthReduction = 2;
-	const int BadCaptureMoveReduction = 4;
-	const int FutilityPruningDepth = 1;
-	const int FutilityPruningMargin = 200;
 
 	public const int MaxLineSize = 10;
 
@@ -212,7 +209,7 @@ sealed class BasicSearch
 			nodesSearched++;
 
 			// SEE pruning
-			// if (move.IsCapture && StaticExchangeEvaluation.IsLosingCapture(board, move)) continue;
+			if (move.IsCapture && StaticExchangeEvaluation.IsLosingCapture(board, move)) continue;
 
 			board.MakeMove(move);
 

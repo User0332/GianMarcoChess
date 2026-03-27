@@ -39,20 +39,30 @@ public static class StaticExchangeEvaluation
 
 		if (board.IsWhiteToMove) // white made the capture
 		{
-			whitePieces ^= 1ul << move.StartSquare.Index;
-			blackPieces ^= 1ul << move.TargetSquare.Index;
+			// remove from start
+			whitePieces &= ~(1ul << move.StartSquare.Index);
+			pieceBitboards[0, (int)move.MovePieceType - 1] &= ~(1ul << move.StartSquare.Index);
 
-			pieceBitboards[0, (int) move.MovePieceType - 1] ^= 1ul << move.StartSquare.Index;
-			pieceBitboards[1, (int) move.CapturePieceType - 1] ^= 1ul << move.TargetSquare.Index;
+			// remove captured piece
+			blackPieces &= ~(1ul << move.TargetSquare.Index);
+			pieceBitboards[1, (int)move.CapturePieceType - 1] &= ~(1ul << move.TargetSquare.Index);
+
+			// add moving piece on target
+			whitePieces |= 1ul << move.TargetSquare.Index;
+			pieceBitboards[0, (int)move.MovePieceType - 1] |= 1ul << move.TargetSquare.Index;
 		}
 		else // black made the capture
 		{
-			blackPieces ^= 1ul << move.StartSquare.Index;
-			whitePieces ^= 1ul << move.TargetSquare.Index;
+			blackPieces &= ~(1ul << move.StartSquare.Index);
+			pieceBitboards[1, (int)move.MovePieceType - 1] &= ~(1ul << move.StartSquare.Index);
 
-			pieceBitboards[1, (int) move.MovePieceType - 1] ^= 1ul << move.StartSquare.Index;
-			pieceBitboards[0, (int) move.CapturePieceType - 1] ^= 1ul << move.TargetSquare.Index;
+			whitePieces &= ~(1ul << move.TargetSquare.Index);
+			pieceBitboards[0, (int)move.CapturePieceType - 1] &= ~(1ul << move.TargetSquare.Index);
+
+			blackPieces |= 1ul << move.TargetSquare.Index;
+			pieceBitboards[1, (int)move.MovePieceType - 1] |= 1ul << move.TargetSquare.Index;
 		}
+
 
 		ulong allPieces = whitePieces | blackPieces;
 
@@ -72,14 +82,15 @@ public static class StaticExchangeEvaluation
 			// remove the attacking piece from the board
 			if (whiteToMove)
 			{
-				whitePieces ^= 1ul << sq;
-				pieceBitboards[0, (int) type - 1] ^= 1ul << sq;
+				whitePieces &= ~(1ul << sq);
+				pieceBitboards[0, (int)type - 1] &= ~(1ul << sq);
 			}
 			else
 			{
-				blackPieces ^= 1ul << sq;
-				pieceBitboards[1, (int) type - 1] ^= 1ul << sq;
+				blackPieces &= ~(1ul << sq);
+				pieceBitboards[1, (int)type - 1] &= ~(1ul << sq);
 			}
+
 
 			allPieces = whitePieces | blackPieces;
 
