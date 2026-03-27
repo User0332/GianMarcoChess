@@ -13,7 +13,7 @@ sealed class BasicSearch
 	const int CAPTURE_MOVE_STACKALLOC_AMT = 100;
 	const int TTDepthGraceThreshold = 0;
 	const int NullMovePruneDepthReduction = 4;
-	const int LateMoveDepthReduction = 2;
+	const int LateMoveDepthReduction = 3;
 
 	public const int MaxLineSize = 10;
 
@@ -113,7 +113,7 @@ sealed class BasicSearch
 
 			int eval;
 
-			if (!inCheck && i >= 6 && isQuietMove)	// late move reduction
+			if (!inCheck && i >= 3 && isQuietMove)	// late move reduction
 			{
 				var reducedDepth = Math.Max(depth - LateMoveDepthReduction, 0);
 
@@ -316,7 +316,7 @@ sealed class BasicSearch
 
 			int extension = 0; // MovePlayedWasInterestingMove(move) ? 1 : 0; // FOR NOW, EXTENSIONS ARE DISABLED - LEADS TO LESS NODE SEARCHES
 
-			if (!inCheck && i >= 6 && isQuietMove) // late move reduction
+			if (!inCheck && i >= 3 && isQuietMove) // late move reduction
 			{
 				var reducedDepth = Math.Max(depth - LateMoveDepthReduction, 0);
 
