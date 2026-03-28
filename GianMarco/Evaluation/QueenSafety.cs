@@ -27,11 +27,10 @@ public static class QueenSafety
 		return BitOperations.PopCount(availableMoves);
 	}
 
-	static int EvaluateQueenSafetyForPlayer(Board board, bool white)
+	static int EvaluateForColor(Board board, bool white, ulong enemyAttacks)
 	{
 		int score = 0;
 
-		ulong enemyAttacks = board.moveGen.GetOpponentAttackMap(board.board);
 		ulong occupancy = board.AllPiecesBitboard;
 
 		PieceList queens = board.GetPieceList(PieceType.Queen, white);
@@ -82,8 +81,8 @@ public static class QueenSafety
 	}
 
 
-	public static int Evaluate(Board board)
+	public static int Evaluate(Board board, ulong whiteAttacks, ulong blackAttacks)
 	{
-		return EvaluateQueenSafetyForPlayer(board, true)-EvaluateQueenSafetyForPlayer(board, false);
+		return EvaluateForColor(board, true, blackAttacks)-EvaluateForColor(board, false, whiteAttacks);
 	}
 }

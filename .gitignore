@@ -6,3 +6,4 @@ __pycache__/
 *.log
 BenchmarkDotNet.Artifacts/
 *.cs.save
+notes

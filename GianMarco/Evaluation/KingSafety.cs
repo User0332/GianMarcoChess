@@ -8,12 +8,12 @@ public static class KingSafety
 	static readonly int[] KingNonEndgameScores = [
 		-40, -40, -40, -40, -40, -40, -40, -40,
 		-20, -20, -20, -20, -20, -20, -20, -20,
+		-20, -20, -20, -20, -20, -20, -20, -20,
+		-20, -20, -20, -20, -20, -20, -20, -20,
 		-10, -10, -10, -10, -10, -10, -10, -10,
 		-10, -10, -10, -10, -10, -10, -10, -10,
 		-10, -10, -10, -10, -10, -10, -10, -10,
-		-10, -10, -10, -10, -10, -10, -10, -10,
-		-10, -10, -10, -10, -10, -10, -10, -10,
-		 25,  25,  40,   0,   0,  25,  40,  25
+		 15,  15,  25,   0,   0,  15,  25,  15
 	];
 
 	static readonly int[] KingEndgameScores = [
@@ -95,7 +95,8 @@ public static class KingSafety
 		Square whiteKingSquare = new(board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex]);
 		Square blackKingSquare = new(board.board.KingSquare[ChessChallenge.Chess.Board.BlackIndex]);
 
-		int dangerousPieceProximityScore = CalculateDangerousPieceProximityScore(board, whiteKingSquare, false)-CalculateDangerousPieceProximityScore(board, blackKingSquare, true);
+		int dangerousPieceProximityScore = 0;
+		// int dangerousPieceProximityScore = CalculateDangerousPieceProximityScore(board, whiteKingSquare, false)-CalculateDangerousPieceProximityScore(board, blackKingSquare, true);
 
 		if (GamePhaseUtils.IsEndgame(board))
 		{

@@ -37,23 +37,20 @@ public static class Evaluator
 	{
 		int score = Material.Evaluate(board);
 
-		score+=(
-			KingSafety.Evaluate(board, score) +
-			Pawn.Evaluate(board) +
-			QueenSafety.Evaluate(board) +
-			PiecePosition.Evaluate(board)
-		);
+		ulong whiteAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, true);
+		ulong blackAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, false);
 
-		// Endgame Only Evals (to help with checkmates and puzzles)
-		// if (GamePhaseUtils.IsEndgame(board))
-		// {
-		// 	score+=(
-		// 		BishopMate.Evaluate(board) +
-		// 		BishopAndKnightMate.Evaluate(board) +
-		// 		ThreeKnightsMate.Evaluate(board) +
-		// 		PawnEndgame.Evaluate(board)
-		// 	);
-		// }
+		score+=KingSafety.Evaluate(board, score);
+		score+=Pawn.Evaluate(board);
+		score+=QueenSafety.Evaluate(board, whiteAttacks, blackAttacks);
+		score+=PiecePosition.Evaluate(board);
+
+		// we only care about these things in the opening/middlegame; in the endgame, may mislead the engine
+		if (!GamePhaseUtils.IsEndgame(board))
+		{
+			score+=Development.Evaluate(board);
+			score+=CenterControl.Evaluate(board, whiteAttacks, blackAttacks);
+		}
 
 		return score;
 	}
