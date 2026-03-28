@@ -61,26 +61,38 @@ public static class PreBuiltInterpreter
 		}
 
 		int wtimeIdx = -1;
-		ulong wTimeMs = 0;
+		int wTimeMs = 0;
 
 		if ((wtimeIdx = Array.IndexOf(cmdArgs, "wtime")) != -1)
 		{
 			string wtimeString = cmdArgs[wtimeIdx+1];
 
-			wTimeMs = ulong.Parse(wtimeString);
+			wTimeMs = int.Parse(wtimeString);
 		}
 
 		int btimeIdx = -1;
-		ulong bTimeMs = 0;
+		int bTimeMs = 0;
 
 		if ((btimeIdx = Array.IndexOf(cmdArgs, "btime")) != -1)
 		{
 			string btimeString = cmdArgs[btimeIdx+1];
 
-			bTimeMs = ulong.Parse(btimeString);
+			bTimeMs = int.Parse(btimeString);
 		}
 
-		int searchTimeMs = (int) (currBoard.IsWhiteToMove ? wTimeMs : bTimeMs)/15;
+		int myTimeMs = currBoard.IsWhiteToMove ? wTimeMs : bTimeMs;
+
+		int searchTimeMs;
+
+		if (myTimeMs <= 10000) // we are low on time, use way less time for this move
+		{
+			searchTimeMs = myTimeMs/20;
+		}
+		else // we have a decent amount of time, use a 1/15th of it for this move
+		{
+			searchTimeMs = myTimeMs/15;
+		}
+
 
 
 		int moveTimeIdx = -1;

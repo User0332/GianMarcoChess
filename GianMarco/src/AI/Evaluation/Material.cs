@@ -10,37 +10,37 @@ public static class MaterialEval
 	public const int BishopValue = 300;
 	public const int KnightValue = 300;
 	public const int RookValue = 500;
-	public const int QueenValue = 900;
+	public const int QueenValue = 1200;
 	public const int KingValue = 10000;
 	public static readonly int[] PieceValuesAccordingToType = {
 		0, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, KingValue
 	};
 
-	
+
 	public static int GetPieceValue(PieceType pieceType)
 	{
 		return PieceValuesAccordingToType[(int) pieceType];
 	}
 
-	
+
 	public static int GetPieceValue(int pieceType)
 	{
 		return PieceValuesAccordingToType[pieceType];
 	}
 
-	
+
 	public static int GetCount(Board board, int pieceType, bool white)
 	{
 		return BitOperations.PopCount(board.board.pieceBitboards[white ? pieceType : pieceType | 8]);
 	}
 
-	
+
 	public static int GetCombinedMaterialValue(Board board, int pieceType, bool white)
 	{
 		return GetCount(board, pieceType, white)*GetPieceValue(pieceType);
 	}
 
-	
+
 	public static int CountMaterial(Board board)
 	{
 		return

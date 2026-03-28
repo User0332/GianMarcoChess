@@ -3,23 +3,21 @@ using ChessChallenge.API;
 
 namespace GianMarco.Search.Utils;
 
-static class MoveOrdering
+sealed class MoveOrdering
 {
 	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
 	public static int GoodCaptureBonus = 500;
 	public static int PromotionBonus = 2000;
 	const int PVMoveBonus = 10000000;
 	const int BadExchangePenalty = -10000;
-	public const byte MaxKillerMovePly = 20;
+	public const byte MaxKillerMovePly = 40;
 	const int FirstKillerMoveBias = 700;
 	const int SecondKillerMoveBias = 600;
-	const int CloseToFirstKillerMoveBias = 650;
-	const int CloseToSecondKillerMoveBias = 600;
-	const int HistoryBonusMultiplier = 0;
-	public static Move[,] whiteKillerMoves = new Move[MaxKillerMovePly, 2];
-	public static Move[,] blackKillerMoves = new Move[MaxKillerMovePly, 2];
-	public static int[,,] whiteSearchHistory = new int[MaxKillerMovePly, 64, 64];
-	public static int[,,] blackSearchHistory = new int[MaxKillerMovePly, 64, 64];
+	const int HistoryBonusMultiplier = 1;
+	public Move[,] whiteKillerMoves = new Move[MaxKillerMovePly, 2];
+	public Move[,] blackKillerMoves = new Move[MaxKillerMovePly, 2];
+	public int[,] whiteSearchHistory = new int[64, 64];
+	public int[,] blackSearchHistory = new int[64, 64];
 
 	static void QSort(in Span<Move> values, in Span<int> scores, int low, int high)
 	{
@@ -52,7 +50,7 @@ static class MoveOrdering
 	}
 
 
-	public static int CalculateMoveScore(Board board, Move move, bool inNormalSearch, int depthFromRoot, int[,,] history, Move[,] killerMoves)
+	public int CalculateMoveScore(Board board, Move move, bool inNormalSearch, int depthFromRoot, int[,] history, Move[,] killerMoves)
 	{
 		int score = 0;
 
@@ -87,19 +85,21 @@ static class MoveOrdering
 		}
 
 		if (move.IsPromotion)
+		{
 			score+=PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType);
+		}
 
-		if (depthFromRoot < MaxKillerMovePly) score+=history[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]*HistoryBonusMultiplier;
+		if (depthFromRoot < MaxKillerMovePly) score+=history[move.StartSquare.Index, move.TargetSquare.Index]*HistoryBonusMultiplier;
 
 		return score;
 	}
 
 
-	public static void OrderMoves(Board board, ref Span<Move> moves, Move shouldBeFirst, bool inNormalSearch, int depthFromRoot)
+	public void OrderMoves(Board board, ref Span<Move> moves, Move shouldBeFirst, bool inNormalSearch, int depthFromRoot)
 	{
 		Span<int> scores = stackalloc int[moves.Length];
 
-		int[,,] history = board.IsWhiteToMove ? whiteSearchHistory : blackSearchHistory;
+		int[,] history = board.IsWhiteToMove ? whiteSearchHistory : blackSearchHistory;
 		Move[,] killerMoves = board.IsWhiteToMove ? whiteKillerMoves : blackKillerMoves;
 
 		// just for performance
@@ -133,5 +133,13 @@ static class MoveOrdering
 
 
 		QSort(in moves, in scores, 0, moves.Length-1);
+	}
+
+	public void ClearTables()
+	{
+		Array.Clear(whiteKillerMoves, 0, whiteKillerMoves.Length);
+		Array.Clear(blackKillerMoves, 0, blackKillerMoves.Length);
+		Array.Clear(whiteSearchHistory, 0, whiteSearchHistory.Length);
+		Array.Clear(blackSearchHistory, 0, blackSearchHistory.Length);
 	}
 }

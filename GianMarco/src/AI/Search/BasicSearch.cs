@@ -14,11 +14,13 @@ sealed class BasicSearch
 	const int TTDepthGraceThreshold = 0;
 	const int NullMovePruneDepthReduction = 4;
 	const int LateMoveDepthReduction = 3;
+	const int DeltaPruningMargin = 150;
 
 	public const int MaxLineSize = 10;
 
 	private readonly Board board;
 	private readonly bool isWhite;
+	public readonly MoveOrdering MoveOrdering = new();
 	public bool SearchEnded = false;
 	public bool KillSearch = false;
 	public Move BestMove = Move.NullMove;
@@ -28,6 +30,7 @@ sealed class BasicSearch
 	private readonly int WorstEvalForBot;
 	public int MaxDepthSearched = 0;
 	public uint NodesSearched = 0;
+
 
 	public BasicSearch(Board board)
 	{
@@ -98,8 +101,6 @@ sealed class BasicSearch
 
 			if (KillSearch) break;
 
-			nodesSearched++;
-
 			board.MakeMove(move);
 
 			bool moveWasACheck = board.IsInCheck();
@@ -113,33 +114,24 @@ sealed class BasicSearch
 
 			int eval;
 
-			if (!inCheck && i >= 3 && isQuietMove)	// late move reduction
+			// PVS
+
+			if (i == 0) // first move, should be PV
 			{
-				var reducedDepth = Math.Max(depth - LateMoveDepthReduction, 0);
-
-				eval = -NegaMax(depth-1+extension, -alpha-1, -alpha, 1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
-
-				if ((eval > alpha) && (beta-alpha > 1)) // this move looks good, research it more
-				{
-					eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
-				}
+				eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, tt, ref nodesSearched, ref maxDepthSearched, PVNext(probablePV));
 			}
 			else
 			{
-				// PVS
+				int newDepth = depth - 1 + extension;
 
-				if (i == 0) // first move, should be PV
-				{
-					eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, PVNext(probablePV));
-				}
-				else
-				{
-					eval = -NegaMax(depth-1+extension, -alpha-1, -alpha, 1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
+				// late move reduction
+				if (!inCheck && i >= 3 && isQuietMove) newDepth = Math.Max(depth - LateMoveDepthReduction, 0);
 
-					if ((eval > alpha) && (eval < beta))
-					{
-						eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
-					}
+				eval = -NegaMax(newDepth, -alpha-1, -alpha, 1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
+
+				if ((eval > alpha) && (eval < beta))
+				{
+					eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
 				}
 			}
 
@@ -184,6 +176,8 @@ sealed class BasicSearch
 	{
 		if (maxDepth == 0) return Evaluator.EvalPositionWithPerspective(board);
 
+		nodesSearched++;
+
 		if (depthFromRoot > maxDepthSearched) maxDepthSearched = depthFromRoot;
 
 		// if commented out, reduces runtime (recongized depth of 9 search -(200)ms), check if this leads to bad play
@@ -192,7 +186,8 @@ sealed class BasicSearch
 
 		if (KillSearch) return WorstEvalForBot;
 
-		int eval = Evaluator.EvalPositionWithPerspective(board);
+		int standPat = Evaluator.EvalPositionWithPerspective(board);
+		int eval = standPat;
 
 		if (eval >= beta) return beta;
 
@@ -200,18 +195,35 @@ sealed class BasicSearch
 
 		Span<Move> moves = stackalloc Move[CAPTURE_MOVE_STACKALLOC_AMT];
 
-		GetOrderedLegalMoves(ref moves, depthFromRoot, [], capturesOnly: true);
+		// TODO: modify the generator to be able to generate checks, captures, and promotions only instead of generating everything and then filtering out the quiet moves
+		GetOrderedLegalMoves(ref moves, depthFromRoot, [], capturesOnly: false);
 
 		for (int i = 0; i < moves.Length; i++)
 		{
 			Move move = moves[i];
 
-			nodesSearched++;
-
 			// SEE pruning
 			if (move.IsCapture && StaticExchangeEvaluation.IsLosingCapture(board, move)) continue;
 
+			// Delta pruning
+			if (move.IsCapture)
+			{
+				int capturedValue = MaterialEval.GetPieceValue(move.CapturePieceType);
+
+				if (standPat + capturedValue + DeltaPruningMargin < alpha)
+				{
+					continue;
+				}
+			}
+
 			board.MakeMove(move);
+
+			if (!move.IsCapture && !move.IsPromotion && !board.IsInCheck())
+			{
+				board.UndoMove(move);
+
+				continue; // if this move is not a capture and does not give check, skip it in quiescence search
+			}
 
 			eval = -NegaMaxQuiesce(-beta, -alpha, depthFromRoot+1, ref nodesSearched, ref maxDepthSearched, maxDepth-1);
 
@@ -228,7 +240,7 @@ sealed class BasicSearch
 		return alpha;
 	}
 
-	public int NegaMax(int depth, int alpha, int beta, int depthFromRoot, Span<Move> currLineBuilder, bool nullMovePruningEnabled, TranspositionTable tt, ref uint nodesSearched, ref int maxDepthSearched, ReadOnlySpan<Move> probablePV)
+	public int NegaMax(int depth, int alpha, int beta, int depthFromRoot, Span<Move> currLineBuilder, TranspositionTable tt, ref uint nodesSearched, ref int maxDepthSearched, ReadOnlySpan<Move> probablePV)
 	{
 		if (depthFromRoot > maxDepthSearched) maxDepthSearched = depthFromRoot;
 
@@ -246,13 +258,15 @@ sealed class BasicSearch
 
 		if (depth == 0) return NegaMaxQuiesce(alpha, beta, depthFromRoot, ref nodesSearched, ref maxDepthSearched);
 
+		nodesSearched++;
+
 		bool inCheck = board.IsInCheck();
 		// int currentStaticEval = Evaluator.EvalPositionWithPerspective(board);
 		int eval = 0;
 
 		// Null move pruning
 		// TODO: check if only pawns exist and if so, do not null move prune because of zugzwang possibilities
-		if (!inCheck && nullMovePruningEnabled)
+		if (!inCheck && !GamePhaseUtils.ZugzwangLikely(board))
 		{
 			Span<Move> throwaway = stackalloc Move[MaxLineSize];
 
@@ -260,7 +274,7 @@ sealed class BasicSearch
 
 			var reducedDepth = Math.Max(depth - NullMovePruneDepthReduction, 0);
 
-			eval = -NegaMax(reducedDepth, -beta, 1-beta, depthFromRoot+1, throwaway, true, tt, ref nodesSearched, ref maxDepthSearched, []);
+			eval = -NegaMax(reducedDepth, -beta, 1-beta, depthFromRoot+1, throwaway, tt, ref nodesSearched, ref maxDepthSearched, []);
 
 			board.UndoMove(Move.NullMove);
 
@@ -305,8 +319,6 @@ sealed class BasicSearch
 
 			currLine.Fill(Move.NullMove);
 
-			nodesSearched++;
-
 			board.MakeMove(move);
 
 			bool moveWasACheck = board.IsInCheck();
@@ -316,33 +328,24 @@ sealed class BasicSearch
 
 			int extension = 0; // MovePlayedWasInterestingMove(move) ? 1 : 0; // FOR NOW, EXTENSIONS ARE DISABLED - LEADS TO LESS NODE SEARCHES
 
-			if (!inCheck && i >= 3 && isQuietMove) // late move reduction
+			// PVS
+
+			if (i == 0) // first move, should be PV
 			{
-				var reducedDepth = Math.Max(depth - LateMoveDepthReduction, 0);
-
-				eval = -NegaMax(reducedDepth, -alpha-1, -alpha, depthFromRoot+1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
-
-				if ((eval > alpha) && (beta-alpha > 1)) // this move looks good, research it more
-				{
-					eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
-				}
+				eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, currLine, tt, ref nodesSearched, ref maxDepthSearched, PVNext(probablePV));
 			}
 			else
 			{
-				// PVS
+				int newDepth = depth - 1 + extension;
 
-				if (i == 0) // first move, should be PV
-				{
-					eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, PVNext(probablePV));
-				}
-				else
-				{
-					eval = -NegaMax(depth-1+extension, -alpha-1, -alpha, depthFromRoot+1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
+				// late move reduction
+				if (!inCheck && i >= 3 && isQuietMove) newDepth = Math.Max(depth - LateMoveDepthReduction, 0);
 
-					if ((eval > alpha) && (beta-alpha > 1)) // this move looks good, research it more
-					{
-						eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, currLine, true, tt, ref nodesSearched, ref maxDepthSearched, []);
-					}
+				eval = -NegaMax(newDepth, -alpha-1, -alpha, depthFromRoot+1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
+
+				if ((eval > alpha) && (beta-alpha > 1)) // this move looks good, research it more
+				{
+					eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
 				}
 			}
 
@@ -352,13 +355,13 @@ sealed class BasicSearch
 			{
 				tt.StoreEvaluation(depth, beta, TranspositionTable.LowerBound);
 
-				if (!(move.IsCapture || move.IsPromotion))
+				if (!move.IsCapture && !move.IsPromotion)
 				{
 					if (depthFromRoot < MoveOrdering.MaxKillerMovePly)
 					{
 						if (board.IsWhiteToMove)
 						{
-							MoveOrdering.whiteSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
+							MoveOrdering.whiteSearchHistory[move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
 
 							Move push = MoveOrdering.whiteKillerMoves[depthFromRoot, 0];
 
@@ -367,7 +370,7 @@ sealed class BasicSearch
 						}
 						else
 						{
-							MoveOrdering.blackSearchHistory[depthFromRoot, move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
+							MoveOrdering.blackSearchHistory[move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
 
 							Move push = MoveOrdering.blackKillerMoves[depthFromRoot, 0];
 
