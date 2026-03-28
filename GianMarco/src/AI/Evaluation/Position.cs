@@ -5,38 +5,41 @@ namespace GianMarco.Evaluation.Position;
 
 public static class PiecePositionalEval
 {
-	static readonly int[] KnightBonuses = {
-		-15, -10, -8, -5, -5, -8, -10, -15,
-		-10, -5,  0,  5,  5,  0, -5,  -10,
-		-8,   0,  10, 15, 15, 10, 0,   -8,
-		-5,   5,  15, 20, 20, 15, 5,   -5,
-		-5,   5,  15, 20, 20, 15, 5,   -5,
-		-8,   0,  10, 15, 15, 10, 0,   -8,
-		-10, -5,  0,  5,  5,  0, -5,  -10,
-		-15, -10, -8, -5, -5, -8, -10, -15,
-	};
+	static readonly int[] KnightBonuses = [
+		-10, 0,  0,  0,  0,  0, 0, -10,
+		  0, 5,  5,  5,  5,  5, 5,   0,
+		  0, 5, 20, 20, 20, 20, 5,   0,
+		  0, 5, 20, 20, 20, 20, 5,   0,
+		  0, 5, 15, 15, 15, 15, 5,   0,
+		  0, 5, 15, 15, 15, 15, 5,   0,
+		  0, 5,  5,  5,  5,  5, 5,   0,
+		-10, 0,  0,  0,  0,  0, 0, -10
+	];
 
-	static readonly int[] BishopBonuses = {
-		-10, -8, -5, -3, -3, -5, -8, -10,
-		-8,  -5, 0,  5,  5,  0, -5, -8,
-		-5,   0, 10, 12, 12, 10, 0,  -5,
-		-3,   5, 12, 15, 15, 12, 5,  -3,
-		-3,   5, 12, 15, 15, 12, 5,  -3,
-		-5,   0, 10, 12, 12, 10, 0,  -5,
-		-8,  -5, 0,  5,  5,  0, -5, -8,
-		-10, -8, -5, -3, -3, -5, -8, -10,
-	};
+	static readonly int[] BishopBonuses = [
+		-10, -5,  0,  0,  0,  0, -5, -10,
+		 -5,  0,  5,  5,  5,  5,  0,  -5,
+		  0,  5, 15, 20, 20, 15,  5,   0,
+		  0,  5, 10, 15, 15, 10,  5,   0,
+		  0,  5, 10, 15, 15, 10,  5,   0,
+		  0,  5, 10, 10, 10, 10,  5,   0,
+		 -5,  0,  5,  5,  5,  5,  0,  -5,
+		-10, -5,  0,  0,  0,  0, -5, -10
+	];
 
-	static readonly int[] RookBonuses = {
-		0,  0,  0,  0,  0,  0,  0,  0,
+	static readonly int[] RookBonuses = [
+		0, 0, 0, 0, 0, 0, 0, 0,
 		15, 15, 15, 15, 15, 15, 15, 15,
-		10, 10, 10, 10, 10, 10, 10, 10,
-		5,  5,  5,  5,  5,  5,  5,  5,
-		5,  5,  5,  5,  5,  5,  5,  5,
-		10, 10, 10, 10, 10, 10, 10, 10,
-		15, 15, 15, 15, 15, 15, 15, 15,
-		0,  0,  0,  0,  0,  0,  0,  0,
-	};
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 5, 10, 10, 0, 0, 0
+	];
+
+	// queens can go basically everywhere and need separate guardrails to not get taken/trapped, etc.
+	// so we do not handle them via a PST here; they are already encouraged to develop by QueenSafety.cs
 
 	static int EvaluateForColor(Board board, bool white)
 	{
@@ -46,14 +49,20 @@ public static class PiecePositionalEval
 		PieceList bishops = board.GetPieceList(PieceType.Bishop, white);
 		PieceList rooks = board.GetPieceList(PieceType.Rook, white);
 
-		foreach (Piece knight in knights)
-			score+=KnightBonuses[knight.Square.Index];
+		for (int i = 0; i < knights.Count; i++)
+		{
+			score+=PSTHelper.GetPSTValue(KnightBonuses, knights[i].Square.Index, white);
+		}
 
-		foreach (Piece bishop in bishops)
-			score+=BishopBonuses[bishop.Square.Index];
+		for (int i = 0; i < bishops.Count; i++)
+		{
+			score+=PSTHelper.GetPSTValue(BishopBonuses, bishops[i].Square.Index, white);
+		}
 
-		foreach (Piece rook in rooks)
-			score+=RookBonuses[rook.Square.Index];
+		for (int i = 0; i < rooks.Count; i++)
+		{
+			score+=PSTHelper.GetPSTValue(RookBonuses, rooks[i].Square.Index, white);
+		}
 
 		return score;
 	}

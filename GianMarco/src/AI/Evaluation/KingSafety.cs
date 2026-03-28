@@ -6,29 +6,18 @@ namespace GianMarco.Evaluation.King;
 // TODO: be able to calculate piece distance using index so we can optimize out the new Square() and only use index instead
 public static class KingSafety
 {
-	static readonly int[] WhiteKingNormalScores = {
-		25, 40, 25, 15, 15, 25, 40, 25,
-		20, 20, 20, 10, 10, 20, 20, 20,
-		10, 10, 10, 0 , 0 , 10, 10, 10,
-		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-		-10,-10,-10,-10,-10,-10,-10,-10,
-		-20,-20,-20,-20,-20,-20,-20,-20,
-		-40,-40,-40,-40,-40,-40,-40,-40,
-	};
+	static readonly int[] KingNonEndgameScores = [
+		-40, -40, -40, -40, -40, -40, -40, -40,
+		-20, -20, -20, -20, -20, -20, -20, -20,
+		-10, -10, -10, -10, -10, -10, -10, -10,
+		-10, -10, -10, -10, -10, -10, -10, -10,
+		-10, -10, -10, -10, -10, -10, -10, -10,
+		-10, -10, -10, -10, -10, -10, -10, -10,
+		-10, -10, -10, -10, -10, -10, -10, -10,
+		 25,  25,  40,   0,   0,  25,  40,  25
+	];
 
-	static readonly int[] BlackKingNormalScores = {
-		-40,-40,-40,-40,-40,-40,-40,-40,
-		-20,-20,-20,-20,-20,-20,-20,-20,
-		-10,-10,-10,-10,-10,-10,-10,-10,
-		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-		0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
-		10, 10, 10, 0 , 0 , 10, 10, 10,
-		20, 20, 20, 10, 10, 20, 20, 20,
-		25, 40, 25, 15, 15, 25, 40, 25,
-	};
-
-	static readonly int[] KingEndgameScores = {
+	static readonly int[] KingEndgameScores = [
 		-10, -5, -5, -5, -5, -5, -5, -10,
 		-5  , 0 , 5 , 5 , 5 , 5 , 0 , -5,
 		-5  , 5 , 5 , 15, 15, 5 , 5 , -5,
@@ -37,37 +26,34 @@ public static class KingSafety
 		-5  , 5 , 5 , 15, 15, 5 , 5 , -5,
 		-5  , 0 , 5 , 5 , 5 , 5 , 0 , -5,
 		-10, -5, -5, -5, -5, -5, -5, -10,
-	};
+	];
 
-	const int KingEndgameDistanceWeight = 25;
+	const int KingEndgameDistanceWeight = 5;
+	const int DangerousPieceProximityWeight = 10;
+	const int CastleBonus = 20;
 
-	const int DangerousPieceProximityWeight = 30; // king safety is important!!!
 
-
-	static int CalculateSquareDistance(int squareOne, int squareTwo)
+	static int CalculateSquareDistance(Square squareOne, Square squareTwo)
 	{
-		(int rankOne, int fileOne) = (squareOne >> 3, squareOne & 0b000111);
-		(int rankTwo, int fileTwo) = (squareTwo >> 3, squareTwo & 0b000111);
-
-		int fileDistance = Math.Abs(fileOne-fileTwo);
-		int rankDistance = Math.Abs(rankOne-rankTwo);
+		int fileDistance = Math.Abs(squareOne.File-squareTwo.File);
+		int rankDistance = Math.Abs(squareOne.Rank-squareTwo.Rank);
 
 		return fileDistance+rankDistance;
 	}
 
-	static int CalculateDangerousPieceProximityScore(Board board, int kingSquare, bool whiteIsAttacking)
+	static int CalculateDangerousPieceProximityScore(Board board, Square kingSquare, bool whiteIsAttacking)
 	{
 		int score = 0;
 
-		PieceList queens = board.allPieceLists[whiteIsAttacking ? ChessChallenge.Chess.PieceHelper.WhiteQueen: ChessChallenge.Chess.PieceHelper.BlackQueen];
+		PieceList queens = board.allPieceLists[whiteIsAttacking ? ChessChallenge.Chess.PieceHelper.WhiteQueen : ChessChallenge.Chess.PieceHelper.BlackQueen];
 
-		foreach (var queen in queens)
+		for (int i = 0; i < queens.Count; i++)
 		{
-			int distance = CalculateSquareDistance(queen.Square.Index, kingSquare);
+			int manhattanDistance = CalculateSquareDistance(queens[i].Square, kingSquare);
 
-			if (distance == 1) continue; // queen is right next to king
+			if (manhattanDistance > 4) continue; // the enemy queen is decently far away, don't apply any penalties
 
-			score+=distance*DangerousPieceProximityWeight; // the farther dangerous pieces are from our king, the better
+			score+=manhattanDistance*DangerousPieceProximityWeight; // the farther dangerous pieces are from our king, the better, so we add the distance times a multiplier to the eval
 		}
 
 		return score;
@@ -77,9 +63,10 @@ public static class KingSafety
 	///  In the endgame, we want kings farther away from the corners
 	/// </summary>
 
-	static int KingPositionSafetyEndgame(int whiteKingSquare, int blackKingSquare, int materialDifference)
+	static int KingPositionSafetyEndgame(Square whiteKingSquare, Square blackKingSquare, int materialDifference)
 	{
-		int score = KingEndgameScores[whiteKingSquare]-KingEndgameScores[blackKingSquare];
+		// never flip the PST since it's centric/symmetric about origin and not rank-based in endgame
+		int score = PSTHelper.GetPSTValue(KingEndgameScores, whiteKingSquare.Index, false)-PSTHelper.GetPSTValue(KingEndgameScores, blackKingSquare.Index, false);
 
 		int kingDistance = CalculateSquareDistance(whiteKingSquare, blackKingSquare)*KingEndgameDistanceWeight;
 
@@ -96,20 +83,25 @@ public static class KingSafety
 	///  In the opening and middlegame, we want kings farther away from the center and in the corners of their own side
 	/// </summary>
 
-	static int KingPositionSafetyNormal(int whiteKingSquare, int blackKingSquare)
+	static int KingPositionSafetyNormal(Square whiteKingSquare, Square blackKingSquare)
 	{
-		return WhiteKingNormalScores[whiteKingSquare]-BlackKingNormalScores[blackKingSquare];
+		return
+			PSTHelper.GetPSTValue(KingNonEndgameScores, whiteKingSquare.Index, true)-
+			PSTHelper.GetPSTValue(KingNonEndgameScores, blackKingSquare.Index, false);
 	}
 
 
 	public static int Evaluate(Board board, int materialDifference)
 	{
-		int whiteKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex];
-		int blackKingSquare = board.board.KingSquare[ChessChallenge.Chess.Board.BlackIndex];
+		Square whiteKingSquare = new(board.board.KingSquare[ChessChallenge.Chess.Board.WhiteIndex]);
+		Square blackKingSquare = new(board.board.KingSquare[ChessChallenge.Chess.Board.BlackIndex]);
 
 		int dangerousPieceProximityScore = CalculateDangerousPieceProximityScore(board, whiteKingSquare, false)-CalculateDangerousPieceProximityScore(board, blackKingSquare, true);
 
-		if (GamePhaseUtils.IsEndgame(board)) return KingPositionSafetyEndgame(whiteKingSquare, blackKingSquare, materialDifference)+dangerousPieceProximityScore;
+		if (GamePhaseUtils.IsEndgame(board))
+		{
+			return KingPositionSafetyEndgame(whiteKingSquare, blackKingSquare, materialDifference)+dangerousPieceProximityScore;
+		}
 
 		return KingPositionSafetyNormal(whiteKingSquare, blackKingSquare)+dangerousPieceProximityScore;
 	}

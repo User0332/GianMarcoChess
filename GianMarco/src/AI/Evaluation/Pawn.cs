@@ -7,29 +7,18 @@ namespace GianMarco.Evaluation.Pawn;
 public static class PawnEval
 {
 	const int PassedPawnBonus = 40;
-	const int StackedPawnPenalty = 20;
-	const int IsolatedPawnPenalty = 25;
+	const int StackedPawnPenalty = 15;
+	const int IsolatedPawnPenalty = 20;
 
-	static readonly int[] WhitePawnPositionBonus = {
-		0,  0,  0,  0,  0,  0,  0,  0,  // rank 1 (white cannot be here)
-		0,  0,  0,  0,  0,  0,  0,  0,  // rank 2 (starting position)
-		1,  3,  5, 10, 10,  5,  3,  1,  // rank 3 (diffusing from center)
-		3,  8, 12, 15, 15, 12,  8,  3,  // rank 4
-		5, 12, 18, 25, 25, 18, 12,  5,  // rank 5
-		10, 20, 28, 35, 35, 28, 20, 10,  // rank 6
-		15, 25, 35, 40, 40, 35, 25, 15,  // rank 7 (promotion zone)
-		50, 50, 50, 50, 50, 50, 50, 50,  // rank 8 (promotion)
-	};
-
-	static readonly int[] BlackPawnPositionBonus = {
-		50, 50, 50, 50, 50, 50, 50, 50,  // rank 1 (promotion)
-		15, 25, 35, 40, 40, 35, 25, 15,  // rank 2 (promotion zone)
-		10, 20, 28, 35, 35, 28, 20, 10,  // rank 3
-		5, 12, 18, 25, 25, 18, 12,  5,   // rank 4
-		3,  8, 12, 15, 15, 12,  8,  3,   // rank 5
-		1,  3,  5, 10, 10,  5,  3,  1,   // rank 6 (diffusing from center)
-		0,  0,  0,  0,  0,  0,  0,  0,   // rank 7 (starting position)
-		0,  0,  0,  0,  0,  0,  0,  0,   // rank 8 (black cannot be here)
+	static readonly int[] PawnPositionBonus = {
+		50, 50, 50, 50, 50, 50, 50, 50,  // promotion (kept for index alignment)
+		 7, 10, 13, 15, 15, 13, 10,  7,
+		 5,  7, 10, 13, 13, 10,  7,  5,
+		 3,  5,  7, 10, 10,  7,  5,  3,
+		 0,  3,  5,  7,  7,  5,  3,  0,
+		 0,  0,  5,  5,  5,  5,  0,  0,
+		 0,  0,  0,  0,  0,  0,  0,  0, // black starting rank
+		 0,  0,  0,  0,  0,  0,  0,  0, // black cannot be here
 	};
 
 	public const ulong FileBitBoard = 0x0101010101010101;
@@ -62,9 +51,9 @@ public static class PawnEval
 	{
 		int score = 0;
 
-		foreach (Piece pawn in pawns)
+		for (int i = 0; i < pawns.Count; i++)
 		{
-			ulong frontViewMask = GetFrontViewMask(pawn.Square, white);
+			ulong frontViewMask = GetFrontViewMask(pawns[i].Square, white);
 
 			if ((enemyPawns & frontViewMask) == 0) // if there are no enemy pawns in the front view, this is a passed pawn
 				score+=PassedPawnBonus;
@@ -83,9 +72,9 @@ public static class PawnEval
 	{
 		int penalty = 0;
 
-		foreach (Piece pawn in pawns)
+		for (int i = 0; i < pawns.Count; i++)
 		{
-			ulong fileMask = FileBitBoard << pawn.Square.File;
+			ulong fileMask = FileBitBoard << pawns[i].Square.File;
 
 			if (BitOperations.PopCount(friendlyPawnBitboard & fileMask) == 1) continue; // if there are no OTHER friendly pawns in the same file, it is not stacked; continue;
 
@@ -108,9 +97,9 @@ public static class PawnEval
 	{
 		int penalty = 0;
 
-		foreach (Piece pawn in pawns)
+		for (int i = 0; i < pawns.Count; i++)
 		{
-			ulong surroundingMask = GetPawnSurroundingMask(pawn.Square);
+			ulong surroundingMask = GetPawnSurroundingMask(pawns[i].Square);
 
 			if (BitOperations.PopCount(friendlyPawnBitboard & surroundingMask) == 1) // if there are no OTHER friendly pawns in the files surrounding this pawn, it is isolated
 				penalty+=IsolatedPawnPenalty;
@@ -132,11 +121,15 @@ public static class PawnEval
 	{
 		int score = 0;
 
-		foreach (var whitePawn in whitePawns)
-			score+=WhitePawnPositionBonus[whitePawn.Square.Index];
+		for (int i = 0; i < whitePawns.Count; i++)
+		{
+			score+=PSTHelper.GetPSTValue(PawnPositionBonus, whitePawns[i].Square.Index, true);
+		}
 
-		foreach (var blackPawn in blackPawns)
-			score+=BlackPawnPositionBonus[blackPawn.Square.Index];
+		for (int i = 0; i < blackPawns.Count; i++)
+		{
+			score+=PSTHelper.GetPSTValue(PawnPositionBonus, blackPawns[i].Square.Index, false);
+		}
 
 		return score;
 	}

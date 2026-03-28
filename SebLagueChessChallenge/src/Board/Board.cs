@@ -57,7 +57,7 @@ namespace ChessChallenge.Chess
         public Stack<ulong> RepetitionPositionHistory;
         public Stack<string> RepetitionPositionHistoryFen;
 
-        Stack<GameState> gameStateHistory;
+        public Stack<GameState> gameStateHistory;
         public GameState currentGameState;
 
         public List<Move> AllGameMoves;
@@ -85,7 +85,7 @@ namespace ChessChallenge.Chess
 
         // Is current player in check?
         // Note: caches check value so calling multiple times does not require recalculating
-       	
+
 	    public bool IsInCheck()
         {
             if (hasCachedInCheckValue)
@@ -105,7 +105,7 @@ namespace ChessChallenge.Chess
         // 2. Movement of rook when castling
         // 3. Removal of pawn from 1st/8th rank during pawn promotion
         // 4. Addition of promoted piece during pawn promotion
-        
+
 		void MovePiece(int piece, int startSquare, int targetSquare)
         {
             BitBoardUtility.ToggleSquares(ref pieceBitboards[piece], startSquare, targetSquare);

@@ -205,7 +205,7 @@ namespace ChessChallenge.API
         }
 
 
-        static ulong GetQueenAttacks(Square square, ulong blockers)
+       public  static ulong GetQueenAttacks(Square square, ulong blockers)
         {
             return GetRookAttacks(square, blockers) | GetBishopAttacks(square, blockers);
         }

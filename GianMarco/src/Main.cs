@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
+using ChessChallenge.API;
 
 namespace GianMarco;
 class Program
