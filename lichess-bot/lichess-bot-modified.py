@@ -1,5 +1,6 @@
 """The main module that controls lichess-bot."""
 import argparse
+import random
 import chess
 import chess.pgn
 from chess.variant import find_variant
@@ -603,14 +604,42 @@ def play_game(li: lichess.Lichess,
         board = chess.Board()
         upd: dict[str, Any] = game.state
 
-        start = datetime.datetime.now()
-        saidmsg = False
+        last_message_time = time.time()
 
-        saidmsg2 = False
+        message_pool = [
+            "glug glug swimming",
+            "That's GianMarco with a capital 'M' 😑",
+            "Many know that I'm goated at chess, many know that I'm Italian, but only Reisig knows that I speak Arabic...",
+            "ceux qui sachent",
+            "I'm going to be like 10 minutes late to the johnson conference because of this game.",
+            "What can I say? People like to evaluate me in context.",
+            "Why be original when the algorithm is winning?",
+            "Iconic"
+        ]
 
-        saidmsg3 = False
+        original_message_pool = message_pool.copy()
+
+        winning_messages = [
+            "I have never seen someone inflict so much damage to themself in so little time.",
+            "This made me chuckle."
+        ]
+
+        losing_messages = [
+            "I'm only a casual chess player - play me in 99 balls if you want a real challenge."
+        ]
 
         while not terminated:
+            if (time.time() - last_message_time) > 120: # send a random message every 120 seconds
+                    message = random.choice(message_pool)
+                    conversation.send_message("player", message)
+
+                    message_pool.remove(message)
+
+                    if not message_pool:
+                        message_pool = original_message_pool.copy()
+
+                    last_message_time = time.time()
+
             move_attempted = False
             try:
                 upd = upd or next_update(lines)
@@ -640,6 +669,18 @@ def play_game(li: lichess.Lichess,
                     elif is_game_over(game):
                         tell_user_game_result(game, board)
                         engine.send_game_result(game, board)
+
+                        winner = game.state.get("winner")
+
+                        winning_name = game.white.name if winner == "white" else game.black.name
+
+                        we_won = winning_name == game.me.name
+
+                        if we_won:
+                            conversation.send_message("player", random.choice(winning_messages))
+                        else:
+                            conversation.send_message("player", random.choice(losing_messages))
+
                         conversation.send_message("player", goodbye)
                         conversation.send_message("spectator", goodbye_spectators)
 
