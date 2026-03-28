@@ -608,7 +608,7 @@ def play_game(li: lichess.Lichess,
 
         message_pool = [
             "glug glug swimming",
-            "That's GianMarco with a capital 'M' 😑",
+            "That's GianMarco with a capital 'M' (-_-)",
             "Many know that I'm goated at chess, many know that I'm Italian, but only Reisig knows that I speak Arabic...",
             "ceux qui sachent",
             "I'm going to be like 10 minutes late to the johnson conference because of this game.",
@@ -671,10 +671,11 @@ def play_game(li: lichess.Lichess,
                         engine.send_game_result(game, board)
 
                         winner = game.state.get("winner")
+                        termination = game.state.get("status")
 
                         winning_name = game.white.name if winner == "white" else game.black.name
 
-                        we_won = winning_name == game.me.name
+                        we_won = (winning_name == game.me.name) and (termination not in [model.Termination.DRAW, model.Termination.TIMEOUT])
 
                         if we_won:
                             conversation.send_message("player", random.choice(winning_messages))
