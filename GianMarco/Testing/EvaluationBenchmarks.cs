@@ -1,9 +1,8 @@
 using BenchmarkDotNet.Attributes;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
-using GianMarco.Evaluation.Pawn;
 
-namespace GianMarco;
+namespace GianMarco.Testing;
 
 [MemoryDiagnoser]
 public class EvaluationBenchmarks
@@ -15,12 +14,5 @@ public class EvaluationBenchmarks
 	public void EvaluateGame()
 	{
 		Evaluator.EvalPositionWithPerspective(board);
-	}
-
-	[Benchmark]
-	public void EvalSpecificPawnEval()
-	{
-		PawnEval.Evaluate(board);
-		// PawnEval.EvaluatePassedPawnsForColor(board.allPieceLists[ChessChallenge.Chess.PieceHelper.WhitePawn], dummyBitboard, false);
 	}
 }

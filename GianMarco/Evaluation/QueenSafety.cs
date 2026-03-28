@@ -5,7 +5,7 @@ using GianMarco.Search.Utils;
 namespace GianMarco.Evaluation;
 
 // used to prevent the engine from getting its queen trapped
-public static class QueenSafetyEval
+public static class QueenSafety
 {
 	const int QueenLowSafeMovesPenalty = 40;
 

@@ -1,9 +1,8 @@
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
-namespace GianMarco.Evaluation.Position;
+namespace GianMarco.Evaluation;
 
-public static class PiecePositionalEval
+public static class PiecePosition
 {
 	static readonly int[] KnightBonuses = [
 		-10, 0,  0,  0,  0,  0, 0, -10,

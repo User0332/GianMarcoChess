@@ -1,44 +1,31 @@
 using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
-using GianMarco.Evaluation.Material;
 using GianMarco.Search.Utils;
-using GianMarco.TTable;
+using GianMarco.Search.Utils.MoveOrdering;
+using GianMarco.TranspositionTable;
 
 namespace GianMarco.Search;
 
-sealed class BasicSearch
+public sealed class BasicSearch(Board board, int projectedDepth)
 {
-	const int MOVE_STACKALLOC_AMT = 218;
-	const int CAPTURE_MOVE_STACKALLOC_AMT = 100;
+	const int MoveStackallocAmount = 218;
 	const int TTDepthGraceThreshold = 0;
 	const int NullMovePruneDepthReduction = 4;
 	const int LateMoveDepthReduction = 3;
 	const int DeltaPruningMargin = 150;
+	const int MaxLineSize = 10;
 
-	public const int MaxLineSize = 10;
-
-	private readonly Board board;
-	private readonly bool isWhite;
-	public readonly MoveOrdering MoveOrdering = new();
+	readonly Board board = board;
+	public readonly MoveOrderer MoveOrderer = new(projectedDepth);
 	public bool SearchEnded = false;
 	public bool KillSearch = false;
 	public Move BestMove = Move.NullMove;
 	public Move[] BestLine = new Move[MaxLineSize];
 	public long TimeSearchedMs = 0;
 	public int BestScore = Constants.MinEval;
-	private readonly int WorstEvalForBot;
 	public int MaxDepthSearched = 0;
 	public uint NodesSearched = 0;
-
-
-	public BasicSearch(Board board)
-	{
-		this.board = board;
-		isWhite = board.IsWhiteToMove;
-		// tt = new(board, (uint) Math.Floor((double) (TTSizeMB*1000000)/Marshal.SizeOf<Entry>()));
-		WorstEvalForBot = board.IsWhiteToMove && isWhite ? Constants.MinEval : Constants.MaxEval;
-	}
 
 	void GetOrderedLegalMoves(ref Span<Move> moveSpan, int depthFromRoot, ReadOnlySpan<Move> probablePV, bool capturesOnly = false)
 	{
@@ -46,7 +33,7 @@ sealed class BasicSearch
 
 		Move shouldBeFirst = probablePV.Length > 0 ? probablePV[0] : Move.NullMove;
 
-		MoveOrdering.OrderMoves(
+		MoveOrderer.OrderMoves(
 			board,
 			ref moveSpan,
 			shouldBeFirst,
@@ -69,7 +56,7 @@ sealed class BasicSearch
 		return pv[1..];
 	}
 
-	public Move Execute(int depth, TranspositionTable tt, ReadOnlySpan<Move> probablePV)
+	public Move Execute(int depth, HeapTranspositionTable tt, ReadOnlySpan<Move> probablePV)
 	{
 		long startTimeTicks = DateTime.Now.Ticks;
 
@@ -78,7 +65,7 @@ sealed class BasicSearch
 		uint nodesSearched = 0;
 		int maxDepthSearched = 0;
 
-		Span<Move> moves = stackalloc Move[MOVE_STACKALLOC_AMT];
+		Span<Move> moves = stackalloc Move[MoveStackallocAmount];
 
 		GetOrderedLegalMoves(ref moves, 0, probablePV);
 
@@ -184,7 +171,7 @@ sealed class BasicSearch
 		if (board.IsDraw()) return Constants.DrawValue;
 		if (board.IsInCheckmate()) return Evaluator.MateIn(depthFromRoot);
 
-		if (KillSearch) return WorstEvalForBot;
+		if (KillSearch) return Constants.MinEval;
 
 		int standPat = Evaluator.EvalPositionWithPerspective(board);
 		int eval = standPat;
@@ -193,7 +180,7 @@ sealed class BasicSearch
 
 		if (eval > alpha) alpha = eval;
 
-		Span<Move> moves = stackalloc Move[CAPTURE_MOVE_STACKALLOC_AMT];
+		Span<Move> moves = stackalloc Move[MoveStackallocAmount];
 
 		// TODO: modify the generator to be able to generate checks, captures, and promotions only instead of generating everything and then filtering out the quiet moves
 		GetOrderedLegalMoves(ref moves, depthFromRoot, [], capturesOnly: false);
@@ -208,7 +195,7 @@ sealed class BasicSearch
 			// Delta pruning
 			if (move.IsCapture)
 			{
-				int capturedValue = MaterialEval.GetPieceValue(move.CapturePieceType);
+				int capturedValue = Material.GetPieceValue(move.CapturePieceType);
 
 				if (standPat + capturedValue + DeltaPruningMargin < alpha)
 				{
@@ -240,18 +227,18 @@ sealed class BasicSearch
 		return alpha;
 	}
 
-	public int NegaMax(int depth, int alpha, int beta, int depthFromRoot, Span<Move> currLineBuilder, TranspositionTable tt, ref uint nodesSearched, ref int maxDepthSearched, ReadOnlySpan<Move> probablePV)
+	public int NegaMax(int depth, int alpha, int beta, int depthFromRoot, Span<Move> currLineBuilder, HeapTranspositionTable tt, ref uint nodesSearched, ref int maxDepthSearched, ReadOnlySpan<Move> probablePV)
 	{
 		if (depthFromRoot > maxDepthSearched) maxDepthSearched = depthFromRoot;
 
 		if (KillSearch)
 		{
-			return WorstEvalForBot;
+			return Constants.MinEval;
 		}
 
 		int lookupVal = tt.LookupEval(depth-TTDepthGraceThreshold, alpha, beta);
 
-		if (lookupVal != TranspositionTable.LookupFailed)
+		if (lookupVal != HeapTranspositionTable.LookupFailed)
 		{
 			return lookupVal;
 		}
@@ -280,7 +267,7 @@ sealed class BasicSearch
 
 			if (eval >= beta)
 			{
-				tt.StoreEvaluation(depth, beta, TranspositionTable.LowerBound);
+				tt.StoreEvaluation(depth, beta, HeapTranspositionTable.LowerBound);
 
 				return beta;
 			}
@@ -291,7 +278,7 @@ sealed class BasicSearch
 			return Constants.DrawValue;
 		}
 
-		Span<Move> moves = stackalloc Move[MOVE_STACKALLOC_AMT];
+		Span<Move> moves = stackalloc Move[MoveStackallocAmount];
 
 		GetOrderedLegalMoves(ref moves, depthFromRoot, probablePV);
 
@@ -308,7 +295,7 @@ sealed class BasicSearch
 		Span<Move> currLine = stackalloc Move[MaxLineSize];
 		currLine.Fill(Move.NullMove);
 
-		int evalBound = TranspositionTable.UpperBound;
+		int evalBound = HeapTranspositionTable.UpperBound;
 		Move bestMove = moves[0];
 
 		int numActionMovesSeen = 0;
@@ -353,29 +340,29 @@ sealed class BasicSearch
 
 			if (eval >= beta)
 			{
-				tt.StoreEvaluation(depth, beta, TranspositionTable.LowerBound);
+				tt.StoreEvaluation(depth, beta, HeapTranspositionTable.LowerBound);
 
 				if (!move.IsCapture && !move.IsPromotion)
 				{
-					if (depthFromRoot < MoveOrdering.MaxKillerMovePly)
+					if (depthFromRoot < MoveOrderer.MaxKillerMovePly)
 					{
 						if (board.IsWhiteToMove)
 						{
-							MoveOrdering.whiteSearchHistory[move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
+							MoveOrderer.whiteSearchHistory[move.StartSquare.Index, move.TargetSquare.Index]+= depth * depth;
 
-							Move push = MoveOrdering.whiteKillerMoves[depthFromRoot, 0];
+							Move push = MoveOrderer.whiteKillerMoves[depthFromRoot, 0];
 
-							MoveOrdering.whiteKillerMoves[depthFromRoot, 1] = push;
-							MoveOrdering.whiteKillerMoves[depthFromRoot, 0] = move;
+							MoveOrderer.whiteKillerMoves[depthFromRoot, 1] = push;
+							MoveOrderer.whiteKillerMoves[depthFromRoot, 0] = move;
 						}
 						else
 						{
-							MoveOrdering.blackSearchHistory[move.StartSquare.Index, move.TargetSquare.Index]+=depth*depth;
+							MoveOrderer.blackSearchHistory[move.StartSquare.Index, move.TargetSquare.Index]+= depth * depth;
 
-							Move push = MoveOrdering.blackKillerMoves[depthFromRoot, 0];
+							Move push = MoveOrderer.blackKillerMoves[depthFromRoot, 0];
 
-							MoveOrdering.blackKillerMoves[depthFromRoot, 1] = push;
-							MoveOrdering.blackKillerMoves[depthFromRoot, 0] = move;
+							MoveOrderer.blackKillerMoves[depthFromRoot, 1] = push;
+							MoveOrderer.blackKillerMoves[depthFromRoot, 0] = move;
 						}
 					}
 				}
@@ -385,7 +372,7 @@ sealed class BasicSearch
 
 			if (eval > alpha)
 			{
-				evalBound = TranspositionTable.Exact;
+				evalBound = HeapTranspositionTable.Exact;
 				bestMove = move;
 
 				alpha = eval;

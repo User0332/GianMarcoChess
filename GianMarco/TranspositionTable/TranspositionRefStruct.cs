@@ -1,7 +1,6 @@
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
-namespace GianMarco.TTable;
+namespace GianMarco.TranspositionTable;
 
 public readonly ref struct RefStructTTable
 {

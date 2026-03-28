@@ -1,10 +1,9 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
-namespace GianMarco.Evaluation.Pawn;
+namespace GianMarco.Evaluation;
 
-public static class PawnEval
+public static class Pawn
 {
 	const int PassedPawnBonus = 40;
 	const int StackedPawnPenalty = 15;
@@ -21,7 +20,7 @@ public static class PawnEval
 		 0,  0,  0,  0,  0,  0,  0,  0, // black cannot be here
 	};
 
-	public const ulong FileBitBoard = 0x0101010101010101;
+	const ulong FileBitBoard = 0x0101010101010101;
 
 	static ulong GetFrontViewMask(Square square, bool white)
 	{

@@ -1,9 +1,9 @@
 using ChessChallenge.API;
 using System.Numerics;
 
-namespace GianMarco.Evaluation.Material;
+namespace GianMarco.Evaluation;
 
-public static class MaterialEval
+public static class Material
 {
 	public const int PawnValue = 100;
 
@@ -42,7 +42,7 @@ public static class MaterialEval
 	}
 
 
-	public static int CountMaterial(Board board)
+	public static int Evaluate(Board board)
 	{
 		return
 			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, false)+

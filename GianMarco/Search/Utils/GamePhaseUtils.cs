@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
 namespace GianMarco.Search.Utils;
-static class GamePhaseUtils
+public static class GamePhaseUtils
 {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsOpening(Board board)

@@ -1,25 +1,20 @@
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.Arm;
 using ChessChallenge.API;
 using GianMarco.Evaluation;
 using GianMarco.Search.Utils;
-using GianMarco.TTable;
+using GianMarco.TranspositionTable;
 
 namespace GianMarco.Search;
 
-class IterDeepSearch
+public sealed class IterDeepSearch
 {
-	public const uint MAX_DEPTH = 40;
-	public const uint TTStackSizeMB = 2;
-	public const uint TTHeapSizeMB = 115;
-	private const int StartDepth = 1;
-	private readonly Board board;
-	private readonly uint maxDepth;
-	private bool endSearchFlag = false;
+	const uint TTHeapSizeMB = 115;
+	const int StartDepth = 1;
+	readonly Board board;
+	readonly uint maxDepth;
+	bool endSearchFlag = false;
+	readonly List<BasicSearch> searches = new(20);
+	Move[] lastPV = [];
 
-	private readonly List<BasicSearch> searches = new(20);
-
-	private Move[] lastPV = [];
 	public IterDeepSearch(Board board, uint maxDepth)
 	{
 		if (maxDepth < StartDepth) maxDepth = StartDepth;
@@ -35,13 +30,11 @@ class IterDeepSearch
 
 			// CombinationTTable sharedTT = new(board, ttSpan, TTHeapSizeMB);
 
-			TranspositionTable sharedTT = new(board, TTHeapSizeMB);
+			HeapTranspositionTable sharedTT = new(board, TTHeapSizeMB);
 
 			for (int i = StartDepth; i <= maxDepth; i++)
 			{
-				var search = new BasicSearch(
-					board
-				);
+				var search = new BasicSearch(board, i);
 
 				searches.Add(search);
 

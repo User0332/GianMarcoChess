@@ -1,8 +1,4 @@
 using ChessChallenge.API;
-using GianMarco.Evaluation.Material;
-using GianMarco.Evaluation.King;
-using GianMarco.Evaluation.Pawn;
-using GianMarco.Evaluation.Position;
 using GianMarco.Search.Utils;
 
 namespace GianMarco.Evaluation;
@@ -39,13 +35,13 @@ public static class Evaluator
 
 	public static int EvalPosition(Board board)
 	{
-		int score = MaterialEval.CountMaterial(board);
+		int score = Material.Evaluate(board);
 
 		score+=(
 			KingSafety.Evaluate(board, score) +
-			PawnEval.Evaluate(board) +
-			QueenSafetyEval.Evaluate(board) +
-			PiecePositionalEval.Evaluate(board)
+			Pawn.Evaluate(board) +
+			QueenSafety.Evaluate(board) +
+			PiecePosition.Evaluate(board)
 		);
 
 		// Endgame Only Evals (to help with checkmates and puzzles)
@@ -68,7 +64,7 @@ public static class Evaluator
 
 		if (
 			GamePhaseUtils.IsEndgame(board) &&
-			MaterialEval.SideToMoveCannotWin(board)
+			Material.SideToMoveCannotWin(board)
 		)
 		{
 			eval = Math.Min(eval, Constants.DrawValue); // if we have insufficient material, we cannot be winning, but we could still be losing (if opponent has more material)

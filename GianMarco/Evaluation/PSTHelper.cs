@@ -1,4 +1,6 @@
-static class PSTHelper
+namespace GianMarco.Evaluation;
+
+public static class PSTHelper
 {
 	public readonly static int[] ZeroTable = new int[64];
 

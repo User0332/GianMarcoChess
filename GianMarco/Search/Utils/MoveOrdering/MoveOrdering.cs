@@ -1,21 +1,23 @@
-using GianMarco.Evaluation.Material;
 using ChessChallenge.API;
+using GianMarco.Evaluation;
 
-namespace GianMarco.Search.Utils;
+namespace GianMarco.Search.Utils.MoveOrdering;
 
-sealed class MoveOrdering
+public sealed class MoveOrderer(int projectedDepth)
 {
-	// new results for 20-generation search: Best Results: capture_bonus=937 promote_bonus=347 castle_bonus=66
-	public static int GoodCaptureBonus = 500;
-	public static int PromotionBonus = 2000;
+	const int GoodCaptureBonus = 500;
+	const int PromotionBonus = 2000;
 	const int PVMoveBonus = 10000000;
 	const int BadExchangePenalty = -10000;
-	public const byte MaxKillerMovePly = 40;
 	const int FirstKillerMoveBias = 700;
 	const int SecondKillerMoveBias = 600;
 	const int HistoryBonusMultiplier = 1;
-	public Move[,] whiteKillerMoves = new Move[MaxKillerMovePly, 2];
-	public Move[,] blackKillerMoves = new Move[MaxKillerMovePly, 2];
+
+	public readonly int MaxKillerMovePly = projectedDepth;
+
+
+	public Move[,] whiteKillerMoves = new Move[projectedDepth, 2];
+	public Move[,] blackKillerMoves = new Move[projectedDepth, 2];
 	public int[,] whiteSearchHistory = new int[64, 64];
 	public int[,] blackSearchHistory = new int[64, 64];
 
@@ -86,7 +88,7 @@ sealed class MoveOrdering
 
 		if (move.IsPromotion)
 		{
-			score+=PromotionBonus+MaterialEval.GetPieceValue(move.PromotionPieceType);
+			score+=PromotionBonus+Material.GetPieceValue(move.PromotionPieceType);
 		}
 
 		if (depthFromRoot < MaxKillerMovePly) score+=history[move.StartSquare.Index, move.TargetSquare.Index]*HistoryBonusMultiplier;

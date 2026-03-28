@@ -1,5 +1,5 @@
 ﻿using BenchmarkDotNet.Running;
-using ChessChallenge.API;
+using GianMarco.Testing;
 
 namespace GianMarco;
 class Program
@@ -10,13 +10,6 @@ class Program
 		{
 			BenchmarkRunner.Run<EvaluationBenchmarks>();
 			return 0;
-		}
-
-		if (args.Length == 3) // for genetic algorithm
-		{
-			Search.Utils.MoveOrdering.GoodCaptureBonus = int.Parse(args[0]);
-			Search.Utils.MoveOrdering.PromotionBonus = int.Parse(args[1]);
-			// Search.Utils.MoveOrdering.CastleBonus = int.Parse(args[2]);
 		}
 
 		UCI.PreBuiltInterpreter.RunAndDelegateCommands();

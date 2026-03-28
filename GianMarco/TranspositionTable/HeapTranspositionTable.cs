@@ -1,26 +1,18 @@
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 
-namespace GianMarco.TTable;
+namespace GianMarco.TranspositionTable;
 
-public sealed class TranspositionTable
+public sealed class HeapTranspositionTable(Board board, uint size)
 {
 	public const int LookupFailed = int.MinValue;
 	public const byte Exact = 0;
 	public const byte LowerBound = 1;
 	public const byte UpperBound = 2;
 
-	public readonly Entry[] Entries;
-	public readonly uint size;
+	public readonly Entry[] Entries = new Entry[size];
+	public readonly uint size = size;
 	public readonly bool Enabled = true;
-	readonly Board board;
-
-	public TranspositionTable(Board board, uint size)
-	{
-		this.board = board;
-		this.size = size;
-		Entries = new Entry[size];
-	}
+	readonly Board board = board;
 
 	public void Clear()
 	{

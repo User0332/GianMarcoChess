@@ -1,6 +1,6 @@
 using System.Numerics;
 using ChessChallenge.API;
-using GianMarco.Evaluation.Material;
+using GianMarco.Evaluation;
 
 namespace GianMarco.Search.Utils;
 
@@ -13,7 +13,7 @@ public static class StaticExchangeEvaluation
 
 	public static int EvaluateCapture(Board board, Move move)
 	{
-		int gain = MaterialEval.GetPieceValue(move.CapturePieceType);
+		int gain = Material.GetPieceValue(move.CapturePieceType);
 
 		ulong whitePieces = board.WhitePiecesBitboard;
 		ulong blackPieces = board.BlackPiecesBitboard;
@@ -72,7 +72,7 @@ public static class StaticExchangeEvaluation
 		while ((attackers & (whiteToMove ? whitePieces : blackPieces)) != 0)
 		{
 			var (sq, type) = FindLeastValuableAttacker(pieceBitboards, attackers, whiteToMove);
-			int pieceValue = MaterialEval.GetPieceValue(type);
+			int pieceValue = Material.GetPieceValue(type);
 
 			gain = pieceValue - gain; // don't cover promotions for now
 

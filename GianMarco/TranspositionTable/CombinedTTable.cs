@@ -1,13 +1,12 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using ChessChallenge.API;
 
-namespace GianMarco.TTable;
+namespace GianMarco.TranspositionTable;
 
 public readonly ref struct CombinationTTable
 {
 	readonly RefStructTTable stackTTable;
-	readonly TranspositionTable heapTTable;
+	readonly HeapTranspositionTable heapTTable;
 	readonly Board board;
 	readonly ulong size;
 

@@ -1,8 +1,7 @@
-using System.Runtime.CompilerServices;
 using ChessChallenge.API;
 using GianMarco.Search.Utils;
 
-namespace GianMarco.Evaluation.King;
+namespace GianMarco.Evaluation;
 // TODO: be able to calculate piece distance using index so we can optimize out the new Square() and only use index instead
 public static class KingSafety
 {
