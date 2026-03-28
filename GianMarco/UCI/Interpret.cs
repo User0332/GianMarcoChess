@@ -50,7 +50,7 @@ public static class PreBuiltInterpreter
 	static void Go(string[] cmdArgs)
 	{
 		int depthIdx = -1;
-		uint searchDepth = IterDeepSearch.MAX_DEPTH;
+		uint searchDepth = IterDeepSearch.MaxDepth;
 
 		if ((depthIdx = Array.IndexOf(cmdArgs, "depth")) != -1)
 		{

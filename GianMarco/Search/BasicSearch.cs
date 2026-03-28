@@ -7,7 +7,7 @@ using GianMarco.TranspositionTable;
 
 namespace GianMarco.Search;
 
-public sealed class BasicSearch(Board board, int projectedDepth)
+public sealed class BasicSearch(Board board, int projectedMaxDepth)
 {
 	const int MoveStackallocAmount = 218;
 	const int TTDepthGraceThreshold = 0;
@@ -17,7 +17,7 @@ public sealed class BasicSearch(Board board, int projectedDepth)
 	const int MaxLineSize = 10;
 
 	readonly Board board = board;
-	public readonly MoveOrderer MoveOrderer = new(projectedDepth);
+	public readonly MoveOrderer MoveOrderer = new(projectedMaxDepth);
 	public bool SearchEnded = false;
 	public bool KillSearch = false;
 	public Move BestMove = Move.NullMove;
