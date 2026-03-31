@@ -5,7 +5,7 @@ using GianMarco.Search.Utils;
 namespace GianMarco.Evaluation;
 
 // used to prevent the engine from getting its queen trapped
-public static class QueenSafety
+public static class Queen
 {
 	const int QueenLowSafeMovesPenalty = 40;
 
@@ -27,7 +27,7 @@ public static class QueenSafety
 		return BitOperations.PopCount(availableMoves);
 	}
 
-	static int EvaluateForColor(Board board, bool white, ulong enemyAttacks)
+	static int EvaluateForColor(Board board, bool white, ulong enemyAttacks, bool isEndgame)
 	{
 		int score = 0;
 
@@ -52,7 +52,7 @@ public static class QueenSafety
 					score+=(safeMoves-Opening_QueenSafeMovesThresh)*Opening_QueenMobilityBonus;
 				}
 			}
-			else if (GamePhaseUtils.IsEndgame(board)) // check endgame before middlegame for performance reasons as the IsMiddlegame call is really just "not opening and not endgame"
+			else if (isEndgame) // check endgame before middlegame for performance reasons as the IsMiddlegame call is really just "not opening and not endgame"
 			{
 				if (safeMoves < Endgame_QueenSafeMovesThresh)
 				{
@@ -81,8 +81,8 @@ public static class QueenSafety
 	}
 
 
-	public static int Evaluate(Board board, ulong whiteAttacks, ulong blackAttacks)
+	public static int Evaluate(Board board, ulong whiteAttacks, ulong blackAttacks, bool isEndgame)
 	{
-		return EvaluateForColor(board, true, blackAttacks)-EvaluateForColor(board, false, whiteAttacks);
+		return EvaluateForColor(board, true, blackAttacks, isEndgame)-EvaluateForColor(board, false, whiteAttacks, isEndgame);
 	}
 }

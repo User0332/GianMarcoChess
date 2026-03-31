@@ -26,6 +26,6 @@ public static class GamePhaseUtils
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool ZugzwangLikely(Board board)
 	{
-		return board.board.totalPieceCountWithoutPawnsAndKings <= 1;
+		return board.board.totalPieceCountWithoutPawnsAndKings == 0;
 	}
 }

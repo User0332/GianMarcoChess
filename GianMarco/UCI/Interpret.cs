@@ -154,7 +154,7 @@ public static class PreBuiltInterpreter
 					Go(cmdArgs);
 					break;
 				case "staticeval": // not uci, just for debugging evals
-					Console.WriteLine(Evaluator.EvalPosition(currBoard));
+					Console.WriteLine(Evaluator.EvalPosition(currBoard, false));
 					break;
 				case "stop":
 					Stop();

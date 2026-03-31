@@ -41,15 +41,20 @@ public static class Material
 		return GetCount(board, pieceType, white)*GetPieceValue(pieceType);
 	}
 
+	public static int CountMaterialForColor(Board board, bool white)
+	{
+		return
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, white)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, white)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, white)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Rook, white)+
+			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Queen, white);
+	}
+
 
 	public static int Evaluate(Board board)
 	{
-		return
-			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Pawn, false)+
-			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Knight, false)+
-			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Bishop, false)+
-			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Rook, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Rook, false)+
-			GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Queen, true)-GetCombinedMaterialValue(board, ChessChallenge.Chess.PieceHelper.Queen, false);
+		return CountMaterialForColor(board, true)-CountMaterialForColor(board, false);
 	}
 
 	public static bool SideToMoveCannotWin(Board board)

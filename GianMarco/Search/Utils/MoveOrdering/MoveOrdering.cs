@@ -1,11 +1,12 @@
 using ChessChallenge.API;
 using GianMarco.Evaluation;
+using GianMarco.Evaluation.Endgame;
 
 namespace GianMarco.Search.Utils.MoveOrdering;
 
 public sealed class MoveOrderer(int projectedDepth)
 {
-	const int GoodCaptureBonus = 500;
+	const int CaptureBonus = 500;
 	const int PromotionBonus = 2000;
 	const int PVMoveBonus = 10000000;
 	const int BadExchangePenalty = -10000;
@@ -52,7 +53,7 @@ public sealed class MoveOrderer(int projectedDepth)
 	}
 
 
-	public int CalculateMoveScore(Board board, Move move, bool inNormalSearch, int depthFromRoot, int[,] history, Move[,] killerMoves)
+	public int CalculateMoveScore(Board board, Move move, bool inNormalSearch, int depthFromRoot, int[,] history, Move[,] killerMoves, bool isEndgame)
 	{
 		int score = 0;
 
@@ -60,14 +61,7 @@ public sealed class MoveOrderer(int projectedDepth)
 		{
 			var rawSEEScore = StaticExchangeEvaluation.EvaluateCapture(board, move);
 
-			if (rawSEEScore < 0)
-			{
-				score = BadExchangePenalty;
-			}
-			else
-			{
-				score+=rawSEEScore+GoodCaptureBonus;
-			}
+			score+=rawSEEScore+CaptureBonus;
 		}
 		else if (inNormalSearch)
 		{
@@ -97,7 +91,7 @@ public sealed class MoveOrderer(int projectedDepth)
 	}
 
 
-	public void OrderMoves(Board board, ref Span<Move> moves, Move shouldBeFirst, bool inNormalSearch, int depthFromRoot)
+	public void OrderMoves(Board board, ref Span<Move> moves, Move shouldBeFirst, bool inNormalSearch, int depthFromRoot, bool isEndgame)
 	{
 		Span<int> scores = stackalloc int[moves.Length];
 
@@ -110,7 +104,7 @@ public sealed class MoveOrderer(int projectedDepth)
 		{
 			for (int i = 0; i < moves.Length; i++)
 			{
-				scores[i] = CalculateMoveScore(board, moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+				scores[i] = CalculateMoveScore(board, moves[i], inNormalSearch, depthFromRoot, history, killerMoves, isEndgame);
 			}
 
 			QSort(in moves, in scores, 0, moves.Length-1);
@@ -128,11 +122,9 @@ public sealed class MoveOrderer(int projectedDepth)
 					continue;
 				}
 
-				scores[i] = CalculateMoveScore(board, moves[i], inNormalSearch, depthFromRoot, history, killerMoves);
+				scores[i] = CalculateMoveScore(board, moves[i], inNormalSearch, depthFromRoot, history, killerMoves, isEndgame);
 			}
 		}
-
-
 
 		QSort(in moves, in scores, 0, moves.Length-1);
 	}

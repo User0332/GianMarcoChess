@@ -8,13 +8,16 @@ namespace GianMarco.Search;
 public sealed class IterDeepSearch
 {
 	public const uint MaxDepth = 40;
-	const uint TTHeapSizeMB = 115;
+	const uint TTHeapSizeMB = 200;
 	const int StartDepth = 1;
+	const int AspirationWindowBaseDelta = 30;
+
 	readonly Board board;
 	readonly uint maxDepth;
 	bool endSearchFlag = false;
 	readonly List<BasicSearch> searches = new(20);
 	Move[] lastPV = [];
+	int lastScore = Constants.ImpossibleEval;
 
 	public IterDeepSearch(Board board, uint maxDepth)
 	{
@@ -36,13 +39,55 @@ public sealed class IterDeepSearch
 			for (int i = StartDepth; i <= maxDepth; i++)
 			{
 				// give +10 as the projected max depth to allow for extensions/quiescence search to utilize killer move heuristics
-				var search = new BasicSearch(board, i+10);
+				BasicSearch search;
 
-				searches.Add(search);
+				int aspirationWindowDelta = AspirationWindowBaseDelta;
+				int aspirationAlpha;
+				int aspirationBeta;
 
-				Move bestMove = search.Execute(i, sharedTT, lastPV);
+				if (lastScore != Constants.ImpossibleEval)
+				{
+					aspirationAlpha = lastScore - aspirationWindowDelta;
+					aspirationBeta = lastScore + aspirationWindowDelta;
+				}
+				else
+				{
+					aspirationAlpha = Constants.MinEval;
+					aspirationBeta = Constants.MaxEval;
+				}
+
+				while (true)
+				{
+					search = new(board, i+10);
+
+					searches.Add(search);
+
+					Move bestMove = search.Execute(i, sharedTT, lastPV);
+
+					int score = search.BestScore;
+
+					if (score > aspirationAlpha && score < aspirationBeta)
+					{
+						// score is within the aspiration window, we are good
+						break;
+					}
+
+					aspirationWindowDelta*=2; // exponential window widening
+
+					if (score <= aspirationAlpha)
+					{
+						aspirationAlpha-=aspirationWindowDelta;
+					}
+					else if (score >= aspirationBeta)
+					{
+						aspirationBeta+=aspirationWindowDelta;
+					}
+
+					break;
+				}
 
 				lastPV = [..search.BestLine]; // copy best line
+				lastScore = search.BestScore;
 
 				if (endSearchFlag) return;
 			}

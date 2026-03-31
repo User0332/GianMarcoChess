@@ -9,11 +9,44 @@ namespace GianMarco.Search;
 
 public sealed class BasicSearch(Board board, int projectedMaxDepth)
 {
+	// to solve the puzzle, disable LMR and reverse futility pruning
+	// nevermind, we can reach depth 14 not bad (each depth < 7000ms) with a good eval and everything enabled, so let's keep everything and work on the endgame evals instead
+	// + as a bonus, e7e4 (best move) is listed by the engine as best up until depth 8, and then it comes back at around depth 13
 	const int MoveStackallocAmount = 218;
 	const int TTDepthGraceThreshold = 0;
-	const int NullMovePruneDepthReduction = 4;
-	const int LateMoveDepthReduction = 3;
+
+	const bool NullMovePruningEnabled = true;
+	const int NullMoveMinimumDepth = 3;
+	const int NullMoveDepthReduction = 3;
+	const int NullMoveMinimumReducedDepth = 0;
+
+	const bool LateMoveReductionEnabled = true;
+	const int LateMoveIndexThreshold = 3;
+	const int LateMoveMinimumDepth = 3;
+	const int LateMoveNonEndgameDepthReduction = 2;
+	const int LateMoveEndgameDepthReduction = 3;
+	const int LateMoveMinimumReducedDepth = 0;
+
+	const bool FutilityPruningEnabled = true;
+	const int FutilityPruningMaxDepth = 1;
+	const int FutilityPruningMargin = 200;
+
+	const bool MainSearchSEEPruningEnabled = true;
+	const int MainSearchSEEPruningMaxDepth = 3;
+
+	const bool QSearchSEEPruningEnabled = true;
+
+	const bool DeltaPruningEnabled = true;
 	const int DeltaPruningMargin = 150;
+
+	const bool ReverseFutilityPruningEnabled = true;
+	const int ReverseFutilityPruningMaxDepth = 1;
+	const int ReverseFutilityPruningDepthToMarginMultiplier = 100;
+
+	const bool PVSearchEnabled = true;
+
+	const bool TranspositionTableEnabled = true;
+
 	const int MaxLineSize = 10;
 
 	readonly Board board = board;
@@ -27,7 +60,7 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 	public int MaxDepthSearched = 0;
 	public uint NodesSearched = 0;
 
-	void GetOrderedLegalMoves(ref Span<Move> moveSpan, int depthFromRoot, ReadOnlySpan<Move> probablePV, bool capturesOnly = false)
+	void GetOrderedLegalMoves(ref Span<Move> moveSpan, int depthFromRoot, ReadOnlySpan<Move> probablePV, bool isEndgame, bool capturesOnly = false)
 	{
 		board.GetLegalMovesNonAlloc(ref moveSpan, capturesOnly: capturesOnly);
 
@@ -38,14 +71,15 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 			ref moveSpan,
 			shouldBeFirst,
 			inNormalSearch: !capturesOnly,
-			depthFromRoot
+			depthFromRoot,
+			isEndgame
 		);
 	}
 
-
-	bool MovePlayedWasInterestingMove(Move move)
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static bool MovePlayedWasInterestingMove(Move move, bool moveWasACheck)
 	{
-		return board.IsInCheck();
+		return moveWasACheck;
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -56,7 +90,7 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 		return pv[1..];
 	}
 
-	public Move Execute(int depth, HeapTranspositionTable tt, ReadOnlySpan<Move> probablePV)
+	public Move Execute(int depth, HeapTranspositionTable tt, ReadOnlySpan<Move> probablePV, int alpha = Constants.MinEval, int beta = Constants.MaxEval)
 	{
 		long startTimeTicks = DateTime.Now.Ticks;
 
@@ -67,13 +101,10 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 		Span<Move> moves = stackalloc Move[MoveStackallocAmount];
 
-		GetOrderedLegalMoves(ref moves, 0, probablePV);
+		GetOrderedLegalMoves(ref moves, 0, probablePV, GamePhaseUtils.IsEndgame(board));
 
 		Span<Move> currLine = stackalloc Move[MaxLineSize];
 		currLine.Fill(Move.NullMove);
-
-		int beta = Constants.MaxEval;
-		int alpha = Constants.MinEval;
 
 		Move bestMove = moves[0];
 
@@ -97,13 +128,13 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 			if (!madeQuietMove && isQuietMove) madeQuietMove = true;
 
-			int extension = 0; // MovePlayedWasInterestingMove(move) ? 1 : 0; // disable move extensions
+			int extension = MovePlayedWasInterestingMove(move, moveWasACheck) ? 1 : 0;
 
 			int eval;
 
 			// PVS
 
-			if (i == 0) // first move, should be PV
+			if (!PVSearchEnabled || i == 0) // first move, should be PV
 			{
 				eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, tt, ref nodesSearched, ref maxDepthSearched, PVNext(probablePV));
 			}
@@ -112,11 +143,11 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 				int newDepth = depth - 1 + extension;
 
 				// late move reduction
-				if (!inCheck && i >= 3 && isQuietMove) newDepth = Math.Max(depth - LateMoveDepthReduction, 0);
+				if (LateMoveReductionEnabled && !inCheck && isQuietMove && depth >= LateMoveMinimumDepth && i >= LateMoveIndexThreshold) newDepth = Math.Max(depth - LateMoveNonEndgameDepthReduction, LateMoveMinimumReducedDepth);
 
 				eval = -NegaMax(newDepth, -alpha-1, -alpha, 1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
 
-				if ((eval > alpha) && (eval < beta))
+				if ((eval > alpha) && (beta-alpha > 1))
 				{
 					eval = -NegaMax(depth-1+extension, -beta, -alpha, 1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
 				}
@@ -161,7 +192,10 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 	int NegaMaxQuiesce(int alpha, int beta, int depthFromRoot, ref uint nodesSearched, ref int maxDepthSearched, int maxDepth = Constants.MaxEval)
 	{
-		if (maxDepth == 0) return Evaluator.EvalPositionWithPerspective(board);
+		bool isEndgame = GamePhaseUtils.IsEndgame(board);
+		int LateMoveDepthReduction = GamePhaseUtils.IsEndgame(board) ? LateMoveEndgameDepthReduction : LateMoveNonEndgameDepthReduction;
+
+		if (maxDepth == 0) return Evaluator.EvalPositionWithPerspective(board, isEndgame);
 
 		nodesSearched++;
 
@@ -173,27 +207,30 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 		if (KillSearch) return Constants.MinEval;
 
-		int standPat = Evaluator.EvalPositionWithPerspective(board);
+		int standPat = Evaluator.EvalPositionWithPerspective(board,isEndgame);
 		int eval = standPat;
 
-		if (eval >= beta) return beta;
+		if (eval >= beta)
+		{
+			return beta;
+		}
 
 		if (eval > alpha) alpha = eval;
 
 		Span<Move> moves = stackalloc Move[MoveStackallocAmount];
 
 		// TODO: modify the generator to be able to generate checks, captures, and promotions only instead of generating everything and then filtering out the quiet moves
-		GetOrderedLegalMoves(ref moves, depthFromRoot, [], capturesOnly: false);
+		GetOrderedLegalMoves(ref moves, depthFromRoot, [], isEndgame, capturesOnly: false);
 
 		for (int i = 0; i < moves.Length; i++)
 		{
 			Move move = moves[i];
 
 			// SEE pruning
-			if (move.IsCapture && StaticExchangeEvaluation.IsLosingCapture(board, move)) continue;
+			if (QSearchSEEPruningEnabled && move.IsCapture && StaticExchangeEvaluation.IsLosingCapture(board, move)) continue;
 
 			// Delta pruning
-			if (move.IsCapture)
+			if (DeltaPruningEnabled && move.IsCapture)
 			{
 				int capturedValue = Material.GetPieceValue(move.CapturePieceType);
 
@@ -216,7 +253,10 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 			board.UndoMove(move);
 
-			if (eval >= beta) return beta;
+			if (eval >= beta)
+			{
+				return beta;
+			}
 
 			if (eval > alpha)
 			{
@@ -229,6 +269,9 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 	public int NegaMax(int depth, int alpha, int beta, int depthFromRoot, Span<Move> currLineBuilder, HeapTranspositionTable tt, ref uint nodesSearched, ref int maxDepthSearched, ReadOnlySpan<Move> probablePV)
 	{
+		bool isEndgame = GamePhaseUtils.IsEndgame(board);
+		int LateMoveDepthReduction = GamePhaseUtils.IsEndgame(board) ? LateMoveEndgameDepthReduction : LateMoveNonEndgameDepthReduction;
+
 		if (depthFromRoot > maxDepthSearched) maxDepthSearched = depthFromRoot;
 
 		if (KillSearch)
@@ -236,11 +279,14 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 			return Constants.MinEval;
 		}
 
-		int lookupVal = tt.LookupEval(depth-TTDepthGraceThreshold, alpha, beta);
-
-		if (lookupVal != HeapTranspositionTable.LookupFailed)
+		if (TranspositionTableEnabled)
 		{
-			return lookupVal;
+			int lookupVal = tt.LookupEval(depth-TTDepthGraceThreshold, alpha, beta);
+
+			if (lookupVal != HeapTranspositionTable.LookupFailed)
+			{
+				return lookupVal;
+			}
 		}
 
 		if (depth == 0) return NegaMaxQuiesce(alpha, beta, depthFromRoot, ref nodesSearched, ref maxDepthSearched);
@@ -248,18 +294,26 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 		nodesSearched++;
 
 		bool inCheck = board.IsInCheck();
-		// int currentStaticEval = Evaluator.EvalPositionWithPerspective(board);
+		bool isPVNode = probablePV.Length > 0;
+		int standPat = Evaluator.EvalPositionWithPerspective(board, isEndgame);
 		int eval = 0;
 
-		// Null move pruning
-		// TODO: check if only pawns exist and if so, do not null move prune because of zugzwang possibilities
-		if (!inCheck && !GamePhaseUtils.ZugzwangLikely(board))
+		if (ReverseFutilityPruningEnabled && !isPVNode && !inCheck && depth <= ReverseFutilityPruningMaxDepth)
+		{
+			if (standPat - (depth*ReverseFutilityPruningDepthToMarginMultiplier) >= beta)
+			{
+				return beta;
+			}
+		}
+
+		// Null move reduction
+		if (NullMovePruningEnabled && !inCheck && !GamePhaseUtils.ZugzwangLikely(board) && depth >= NullMoveMinimumDepth)
 		{
 			Span<Move> throwaway = stackalloc Move[MaxLineSize];
 
 			board.MakeMove(Move.NullMove);
 
-			var reducedDepth = Math.Max(depth - NullMovePruneDepthReduction, 0);
+			var reducedDepth = Math.Max(depth - NullMoveDepthReduction, NullMoveMinimumReducedDepth);
 
 			eval = -NegaMax(reducedDepth, -beta, 1-beta, depthFromRoot+1, throwaway, tt, ref nodesSearched, ref maxDepthSearched, []);
 
@@ -267,7 +321,10 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 			if (eval >= beta)
 			{
-				tt.StoreEvaluation(depth, beta, HeapTranspositionTable.LowerBound);
+				if (TranspositionTableEnabled)
+				{
+					tt.StoreEvaluation(depth, beta, HeapTranspositionTable.LowerBound);
+				}
 
 				return beta;
 			}
@@ -280,7 +337,7 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 		Span<Move> moves = stackalloc Move[MoveStackallocAmount];
 
-		GetOrderedLegalMoves(ref moves, depthFromRoot, probablePV);
+		GetOrderedLegalMoves(ref moves, depthFromRoot, probablePV, isEndgame);
 
 		if (moves.Length == 0)
 		{
@@ -306,18 +363,42 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 			currLine.Fill(Move.NullMove);
 
+			int seeScore = StaticExchangeEvaluation.EvaluateMove(board, move);
+
 			board.MakeMove(move);
 
 			bool moveWasACheck = board.IsInCheck();
 			bool isQuietMove = !(move.IsCapture || move.IsPromotion || moveWasACheck);
 
-			if (!isQuietMove) numActionMovesSeen++; // try beat depth 10 -> 6549158 nodes
+			if (!isQuietMove) numActionMovesSeen++;
 
-			int extension = 0; // MovePlayedWasInterestingMove(move) ? 1 : 0; // FOR NOW, EXTENSIONS ARE DISABLED - LEADS TO LESS NODE SEARCHES
+			int extension = MovePlayedWasInterestingMove(move, moveWasACheck) ? 1 : 0;
+
+			// futility pruning
+			if (FutilityPruningEnabled && i != 0 && !inCheck && isQuietMove && depth <= FutilityPruningMaxDepth)
+			{
+				if (standPat + FutilityPruningMargin < alpha)
+				{
+					board.UndoMove(move);
+
+					continue;
+				}
+			}
+
+			// SEE pruning
+			if (MainSearchSEEPruningEnabled && i != 0 && !moveWasACheck && !inCheck && depth < MainSearchSEEPruningMaxDepth && move.IsCapture && !move.IsPromotion && !move.IsEnPassant)
+			{
+				if (seeScore < 0)
+				{
+					board.UndoMove(move);
+
+					continue;
+				}
+			}
 
 			// PVS
 
-			if (i == 0) // first move, should be PV
+			if (!PVSearchEnabled || i == 0) // first move, should be PV
 			{
 				eval = -NegaMax(depth-1+extension, -beta, -alpha, depthFromRoot+1, currLine, tt, ref nodesSearched, ref maxDepthSearched, PVNext(probablePV));
 			}
@@ -326,7 +407,7 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 				int newDepth = depth - 1 + extension;
 
 				// late move reduction
-				if (!inCheck && i >= 3 && isQuietMove) newDepth = Math.Max(depth - LateMoveDepthReduction, 0);
+				if (LateMoveReductionEnabled && !inCheck && isQuietMove && depth >= LateMoveMinimumDepth && i >= LateMoveIndexThreshold) newDepth = Math.Max(depth - LateMoveDepthReduction, LateMoveMinimumReducedDepth);
 
 				eval = -NegaMax(newDepth, -alpha-1, -alpha, depthFromRoot+1, currLine, tt, ref nodesSearched, ref maxDepthSearched, []);
 
@@ -340,7 +421,10 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 			if (eval >= beta)
 			{
-				tt.StoreEvaluation(depth, beta, HeapTranspositionTable.LowerBound);
+				if (TranspositionTableEnabled)
+				{
+					tt.StoreEvaluation(depth, beta, HeapTranspositionTable.LowerBound);
+				}
 
 				if (!move.IsCapture && !move.IsPromotion)
 				{
@@ -383,7 +467,10 @@ public sealed class BasicSearch(Board board, int projectedMaxDepth)
 
 		if (depthFromRoot < MaxLineSize) currLineBuilder[depthFromRoot] = bestMove;
 
-		tt.StoreEvaluation(depth, alpha, evalBound);
+		if (TranspositionTableEnabled)
+		{
+			tt.StoreEvaluation(depth, alpha, evalBound);
+		}
 
 		return alpha;
 	}

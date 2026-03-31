@@ -1,5 +1,5 @@
 using ChessChallenge.API;
-using GianMarco.Search.Utils;
+using GianMarco.Evaluation.Endgame;
 
 namespace GianMarco.Evaluation;
 
@@ -8,6 +8,7 @@ public static class Constants
 	public const int MaxEval = 100000000;
 	public const int MinEval = -100000000;
 	public const int DrawValue = 0;
+	public const int ImpossibleEval = int.MaxValue;
 }
 
 public static class Evaluator
@@ -33,34 +34,65 @@ public static class Evaluator
 		return (int) Math.Ceiling((double) (Constants.MaxEval-score)/2);
 	}
 
-	public static int EvalPosition(Board board)
+	public static int EvalPosition(Board board, bool isEndgame)
 	{
 		int score = Material.Evaluate(board);
 
-		ulong whiteAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, true);
-		ulong blackAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, false);
-
-		score+=KingSafety.Evaluate(board, score);
 		score+=Pawn.Evaluate(board);
-		score+=QueenSafety.Evaluate(board, whiteAttacks, blackAttacks);
-		score+=PiecePosition.Evaluate(board);
 
-		// we only care about these things in the opening/middlegame; in the endgame, may mislead the engine
-		if (!GamePhaseUtils.IsEndgame(board))
+		// we only care about these things in the opening/middlegame; in the endgame, they may mislead the engine
+		// in the endgame, we want to know whether or not we are winning which mainly includes higher depth & endgame-specialized evals anyway
+		// in the endgame we really only care about depth and whether or not we are theoretically winning
+		if (!isEndgame)
 		{
+			ulong whiteAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, true);
+			ulong blackAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, false);
+
 			score+=Development.Evaluate(board);
 			score+=CenterControl.Evaluate(board, whiteAttacks, blackAttacks);
+			score+=PiecePosition.Evaluate(board);
+			score+=Queen.Evaluate(board, whiteAttacks, blackAttacks, isEndgame);
+			score+=King.EvaluateOpeningAndMiddlegame(board);
 		}
+		else
+		{
+			int pawnEndgameEval = PawnEndgames.Evaluate(board, out var theoreticalDraw);
+
+			if (theoreticalDraw) return 0;
+
+			if (pawnEndgameEval != 0)
+			{
+				score+=pawnEndgameEval;
+				goto EvaluationOver;
+			}
+
+			int queenVsRookEval = QueenVsRook.Evaluate(board);
+
+			if (queenVsRookEval != 0)
+			{
+				score+=queenVsRookEval;
+				goto EvaluationOver;
+			}
+
+			// if we got here then we didn't detect a special endgame, so we just use this eval to force the losing king into a corner
+			ulong whiteAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, true);
+			ulong blackAttacks = AttackUtils.GetPseudoLegalAttackBitboard(board, false);
+
+			score+=King.EvaluateEndgame(board, whiteAttacks, blackAttacks);
+		}
+
+		EvaluationOver:
+
 
 		return score;
 	}
 
-	public static int EvalPositionWithPerspective(Board board)
+	public static int EvalPositionWithPerspective(Board board, bool isEndgame)
 	{
-		var eval =  board.IsWhiteToMove ? EvalPosition(board) : -EvalPosition(board);
+		var eval =  board.IsWhiteToMove ? EvalPosition(board, isEndgame) : -EvalPosition(board, isEndgame);
 
 		if (
-			GamePhaseUtils.IsEndgame(board) &&
+			isEndgame &&
 			Material.SideToMoveCannotWin(board)
 		)
 		{

@@ -13,6 +13,6 @@ public class EvaluationBenchmarks
 	[Benchmark]
 	public void EvaluateGame()
 	{
-		Evaluator.EvalPositionWithPerspective(board);
+		Evaluator.EvalPositionWithPerspective(board, false);
 	}
 }
